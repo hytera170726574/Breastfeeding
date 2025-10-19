@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>母乳喂养记录系统 - 主界面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .floating-card {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .main-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .main-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7);
+            }
+            
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+            }
+            
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <!-- 主界面 -->
+    <div id="main-interface" class="w-full max-w-4xl floating-card p-8 relative fade-in">
+        <!-- 右上角婴儿信息 -->
+        <div id="baby-info" class="absolute top-4 right-4 bg-white rounded-xl shadow-md p-4 w-64">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-gray-800">我的宝宝</h3>
+                <button id="edit-baby-btn" class="text-blue-500 hover:text-blue-700 text-sm">
+                    编辑
+                </button>
+            </div>
+            <div id="baby-details" class="space-y-2">
+                <!-- 婴儿信息将在这里动态加载 -->
+                <div class="flex justify-between">
+                    <span class="text-gray-600">姓名:</span>
+                    <span id="baby-name" class="font-medium">未设置</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">性别:</span>
+                    <span id="baby-gender" class="font-medium">未知</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">出生日期:</span>
+                    <span id="baby-birthdate" class="font-medium">未设置</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">月龄:</span>
+                    <span id="baby-age" class="font-medium">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主标题 -->
+        <div class="text-center mb-12 mt-4">
+            <h1 class="text-3xl font-bold text-gray-800">母乳喂养记录</h1>
+            <p class="text-gray-600 mt-2">记录宝宝成长的每一个珍贵时刻</p>
+        </div>
+
+        <!-- 四个主按钮 -->
+        <div class="flex flex-col items-center justify-center">
+            <!-- 上方按钮 -->
+            <div class="mb-8">
+                <button class="main-button bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-2xl text-lg flex items-center justify-center w-48">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    亲喂
+                </button>
+            </div>
+            
+            <div class="flex items-center justify-between w-full max-w-md">
+                <!-- 左侧按钮 -->
+                <button class="main-button bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-8 rounded-2xl text-lg flex items-center justify-center w-48">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    睡眠
+                </button>
+                
+                <!-- 右侧按钮 -->
+                <button class="main-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-2xl text-lg flex items-center justify-center w-48">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    瓶喂
+                </button>
+            </div>
+            
+            <!-- 下方按钮 -->
+            <div class="mt-8">
+                <button class="main-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 px-8 rounded-2xl text-lg flex items-center justify-center w-48">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    记录
+                </button>
+            </div>
+        </div>
+        
+        <!-- 底部统计信息 -->
+        <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white rounded-xl p-4 shadow text-center">
+                <p class="text-gray-600">今日喂养次数</p>
+                <p class="text-2xl font-bold text-green-500">3</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow text-center">
+                <p class="text-gray-600">今日睡眠时长</p>
+                <p class="text-2xl font-bold text-yellow-500">5.2h</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow text-center">
+                <p class="text-gray-600">上次记录时间</p>
+                <p class="text-xl font-bold text-blue-500">2小时前</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建婴儿界面 -->
+    <div id="create-baby-interface" class="w-full max-w-md floating-card p-8 hidden">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">添加宝宝信息</h2>
+            <p class="text-gray-600 mt-2">请填写宝宝的基本信息</p>
+        </div>
+        
+        <form id="create-baby-form" class="space-y-4">
+            <div>
+                <label for="baby-name-input" class="block text-sm font-medium text-gray-700 mb-1">宝宝姓名</label>
+                <input type="text" id="baby-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入宝宝姓名" required>
+            </div>
+            
+            <div>
+                <label for="baby-gender" class="block text-sm font-medium text-gray-700 mb-1">宝宝性别</label>
+                <select id="baby-gender" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="">请选择性别</option>
+                    <option value="boy">男宝宝</option>
+                    <option value="girl">女宝宝</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="baby-birthdate" class="block text-sm font-medium text-gray-700 mb-1">出生日期</label>
+                <input type="date" id="baby-birthdate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+            </div>
+            
+            <div>
+                <label for="baby-weight" class="block text-sm font-medium text-gray-700 mb-1">出生体重 (kg)</label>
+                <input type="number" step="0.01" id="baby-weight" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="例如: 3.2">
+            </div>
+            
+            <div class="flex space-x-4 pt-4">
+                <button type="button" id="cancel-create-baby" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-200">
+                    取消
+                </button>
+                <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">
+                    保存
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // 模拟从后端获取用户婴儿信息
+        // 配置后端API地址
+        const API_BASE_URL = 'http://127.0.0.1:5000/api';
+        async function getUserBabyInfo() {
+            console.log("开始获取用户婴儿信息...");
+        
+            // 从本地存储获取token
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                console.warn("未找到认证token");
+                return {
+                    hasBaby: false,
+                    baby: null
+                };
+            }
+
+        console.log("发送获取婴儿信息请求...");
+            // 这里应该是一个API调用，例如:
+            // const response =await fetch(`${API_BASE_URL}/baby/`)
+        const response = await fetch('/api/baby', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`  // 根据您的后端认证方式调整
+            }
+        });
+        console.log("收到婴儿信息响应，状态码:", response.status);
+        const data = await response.json();
+        console.log("婴儿信息响应数据:", data);
+            // 模拟API响应 - 假设用户没有婴儿
+        return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve({
+                        hasBaby: false, // 设置为false显示创建界面，true显示主界面
+                        baby: null
+                    });
+                }, 500);
+            });
+        }
+
+        // 页面加载时检查用户是否有婴儿
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                const babyInfo = await getUserBabyInfo();
+                
+                if (babyInfo.hasBaby && babyInfo.baby) {
+                    // 用户有婴儿，显示主界面并更新婴儿信息
+                    showMainInterface();
+                    updateBabyInfo(babyInfo.baby);
+                } else {
+                    // 用户没有婴儿，显示创建婴儿界面
+                    showCreateBabyInterface();
+                }
+            } catch (error) {
+                console.error('获取婴儿信息失败:', error);
+                // 默认显示创建婴儿界面
+                showCreateBabyInterface();
+            }
+        });
+
+        // 显示主界面
+        function showMainInterface() {
+            document.getElementById('main-interface').classList.remove('hidden');
+            document.getElementById('create-baby-interface').classList.add('hidden');
+        }
+
+        // 显示创建婴儿界面
+        function showCreateBabyInterface() {
+            document.getElementById('main-interface').classList.add('hidden');
+            document.getElementById('create-baby-interface').classList.remove('hidden');
+        }
+
+        // 更新婴儿信息
+        function updateBabyInfo(baby) {
+            document.getElementById('baby-name').textContent = baby.name || '未设置';
+            document.getElementById('baby-gender').textContent = 
+                baby.gender === 'male' ? '男' : baby.gender === 'female' ? '女' : '未知';
+            document.getElementById('baby-birthdate').textContent = baby.birthdate || '未设置';
+            
+            // 计算月龄
+            if (baby.birthdate) {
+                const birthDate = new Date(baby.birthdate);
+                const today = new Date();
+                const months = (today.getFullYear() - birthDate.getFullYear()) * 12 + 
+                              (today.getMonth() - birthDate.getMonth());
+                document.getElementById('baby-age').textContent = `${months}个月`;
+            } else {
+                document.getElementById('baby-age').textContent = '-';
+            }
+        }
+
+        // 创建婴儿表单提交
+        document.getElementById('create-baby-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('baby-name-input').value,
+                gender: document.getElementById('baby-gender').value,
+                birthdate: document.getElementById('baby-birthdate').value,
+                // weight: document.getElementById('baby-weight').value
+            };
+            
+            // 这里应该发送API请求创建婴儿
+            // 例如: await fetch('/api/baby', { method: 'POST', body: JSON.stringify(formData) });
+            await fetch('/api/baby', { method: 'POST', body: JSON.stringify(formData) });
+            // 模拟API调用
+            try {
+                // 假设创建成功
+                console.log('创建婴儿:', formData);
+                
+                // 更新婴儿信息并显示主界面
+                updateBabyInfo(formData);
+                showMainInterface();
+                
+                // 可以添加成功提示
+                alert('宝宝信息创建成功！');
+            } catch (error) {
+                console.error('创建婴儿失败:', error);
+                alert('创建失败，请稍后重试');
+            }
+        });
+
+        // 取消创建婴儿
+        document.getElementById('cancel-create-baby').addEventListener('click', function() {
+            // 在实际应用中，可能需要处理取消逻辑
+            // 这里我们仍然显示创建界面，因为用户必须创建婴儿才能使用系统
+            // 或者可以添加退出登录功能
+            alert('您需要创建宝宝信息才能使用系统功能');
+        });
+
+        // 编辑婴儿信息
+        document.getElementById('edit-baby-btn').addEventListener('click', function() {
+            // 这里可以打开编辑婴儿信息的模态框或跳转到编辑页面
+            alert('编辑婴儿信息功能');
+        });
+
+        // 主按钮点击事件
+        document.querySelectorAll('.main-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const buttonText = this.textContent.trim();
+                alert(`您点击了: ${buttonText}`);
+                // 这里可以根据按钮类型跳转到相应的记录页面
+            });
+        });
+    </script>
+</body>
+</html>
