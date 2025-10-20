@@ -55,18 +55,21 @@ def get_babies():
         # 获取该用户的所有婴儿
         babies = Baby.query.filter_by(user_id=current_user.id).all()
         print(babies)
-        babies_data = []
-        for baby in range(babies):
-            baby_data = {
+        
+        # 修复遍历逻辑并构建返回数据
+        babies_data = [
+            {
                 "id": baby.id,
                 "name": baby.name,
                 "gender": baby.gender,
-                "birthdate": baby.birth_date.isoformat() if baby.birthdate else None,
-                "user": baby.user
+                "birth_date": baby.birth_date.isoformat() if baby.birth_date else None,
+                "user": baby.user_id
             }
-            babies_data.append(baby_data)
-        # babies_data = [BabyResponse.from_orm(baby) for baby in babies]
-        return success_response(message='获取婴儿信息成功',data= babies_data), 200
+            for baby in babies
+        ]
+        # return success_response(message='获取婴儿信息成功', data=babies_data), 200
+        return success_response('获取婴儿信息成功',BabyResponse.from_orm(babies_data).dict()), 200
+
 
     except Exception as e:
         return error_response(f'获取婴儿信息失败: {str(e)}')

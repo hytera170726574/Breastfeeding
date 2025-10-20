@@ -338,9 +338,10 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
+                    //由于前端逻辑是把email当做唯一key，因此，后端的username字段传输为email，email传输为name，避免bug
                     body: JSON.stringify({
-                        username: name,
-                        email: email,
+                        username: email,
+                        email: name,
                         password: password
                     })
                 });
