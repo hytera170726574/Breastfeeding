@@ -23,7 +23,7 @@ class User(db.Model):
         return f'<User {self.username}>'
 
 class Baby(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)  # 设置为自增主键
     name = db.Column(db.String(100), nullable=False)
     birth_date = db.Column(db.Date, nullable=False)
     gender = db.Column(db.String(10), nullable=True)  # 性别: 'male', 'female', 'other'

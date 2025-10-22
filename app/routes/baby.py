@@ -4,10 +4,13 @@ from app.models.models import Baby
 from app.schemas.schemas import BabyCreate, BabyUpdate, BabyResponse
 from app.utils.helpers import get_current_user, success_response, error_response
 from flask_jwt_extended import jwt_required
+import logging
+
+logger = logging.getLogger(__name__)
 
 baby_bp = Blueprint('baby_bp', __name__)
 
-@baby_bp.route('/', methods=['POST'])
+@baby_bp.route('/createBaby', methods=['POST'])
 @jwt_required()
 def create_baby():
     print("开始创建婴儿")
@@ -18,21 +21,29 @@ def create_baby():
         if not current_user:
             return error_response('用户未登录', 401)
 
-        # 检查用户拥有的婴儿数量（限制免费用户最多2个婴儿）
-        baby_count = Baby.query.filter_by(user_id=current_user.id).count()
-        if baby_count >= 200:
-            return error_response('免费账户最多只能创建2个婴儿信息，如需更多请升级到高级账户', 403)
-
+        # # 检查用户拥有的婴儿数量（限制免费用户最多2个婴儿）
+        # baby_count = Baby.query.filter_by(user_id=current_user.id).count()
+        # if baby_count >= 200:
+        #     return error_response('免费账户最多只能创建2个婴儿信息，如需更多请升级到高级账户', 403)
+        # all_baby_count = Baby.query.all().count()
         # 验证输入数据
+        print("获取当前用户1")
         baby_data = BabyCreate(**request.json)
+        print("获取当前用户2")
+        logger.info(f"Received baby data: {baby_data}")
+        print("baby_data:", baby_data)
         # 创建婴儿记录
+        from datetime import datetime
+        timestamp = datetime.now().timestamp()
         baby = Baby(
             name=baby_data.name,
             birth_date=baby_data.birth_date,
             gender=baby_data.gender,
             user_id=current_user.id,
-            # id = baby_count +1
+            created_at = db.func.now(),
+            id =current_user.id+int(timestamp)
         )
+        logger.info(f"Creating baby for user id: {current_user.id}")
         # baby.jsonify()
         db.session.add(baby)
         db.session.commit()
@@ -49,27 +60,28 @@ def get_babies():
     try:
         # 获取当前用户
         current_user = get_current_user()
+        logger.info(f"current user id is : {current_user.id if current_user else 'Unknown'}")
+        # print("current user id is :",current_user)
         if not current_user:
             return error_response('用户未登录', 401)
 
         # 获取该用户的所有婴儿
         babies = Baby.query.filter_by(user_id=current_user.id).all()
-        print(babies)
-        
-        # 修复遍历逻辑并构建返回数据
-        babies_data = [
-            {
+        babies_data = []
+        for baby in babies:
+            baby_data = {
                 "id": baby.id,
                 "name": baby.name,
                 "gender": baby.gender,
                 "birth_date": baby.birth_date.isoformat() if baby.birth_date else None,
-                "user": baby.user_id
+                "user_id": baby.user_id
             }
-            for baby in babies
-        ]
-        # return success_response(message='获取婴儿信息成功', data=babies_data), 200
-        return success_response('获取婴儿信息成功',BabyResponse.from_orm(babies_data).dict()), 200
-
+            babies_data.append(baby_data)
+        baby_jsondata ={
+            "data":babies_data
+        }
+        # logger.info(babies_data.json())
+        return success_response(message='获取婴儿信息成功', data=babies_data, status_code=200)
 
     except Exception as e:
         return error_response(f'获取婴儿信息失败: {str(e)}')

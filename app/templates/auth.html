@@ -113,15 +113,15 @@
             <!-- 登录表单 -->
             <form id="login-form" class="space-y-4">
                 <div>
-                    <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">邮箱地址</label>
-                    <input type="email" id="login-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入邮箱" required>
+                    <label for="login-username" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                    <input type="text" id="login-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入用户名" required>
                 </div>
-                
+
                 <div>
                     <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
                     <input type="password" id="login-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入密码" required>
                 </div>
-                
+
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
                         <input type="checkbox" id="remember-me" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
@@ -129,12 +129,12 @@
                     </div>
                     <a href="#" class="text-sm text-blue-600 hover:text-blue-500">忘记密码?</a>
                 </div>
-                
+
                 <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex justify-center items-center">
                     <span id="login-text">登录</span>
                     <div id="login-loader" class="loader hidden"></div>
                 </button>
-                
+
                 <div id="login-message" class="text-sm text-center mt-2 hidden"></div>
             </form>
             
@@ -223,7 +223,7 @@
             e.preventDefault();
             
             // 获取表单数据
-            const email = document.getElementById('login-email').value;
+            const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
             
             // 显示加载状态
@@ -246,8 +246,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        username:email,
-                        // email: email,
+                        username: username,
                         password: password
                     })
                 });
@@ -268,6 +267,11 @@
                         console.log('保存token');
                         localStorage.setItem('authToken', data.access_token);
                     }
+                    if (data.user)
+                    {
+                        console.log('保存用户信息');
+                        localStorage.setItem('userInfo', JSON.stringify(data.user));
+                    }
                     
                     // 延迟一下让用户看到成功消息
                     setTimeout(() => {
@@ -276,7 +280,7 @@
                     }, 1500);
                 } else {
                     // 登录失败，显示错误消息
-                    loginMessage.textContent = data.message || '登录失败，请检查您的邮箱和密码';
+                    loginMessage.textContent = data.message || '登录失败，请检查您的用户名和密码';
                     loginMessage.classList.remove('hidden');
                     loginMessage.classList.remove('text-green-500');
                     loginMessage.classList.add('text-red-500');
@@ -338,10 +342,9 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    //由于前端逻辑是把email当做唯一key，因此，后端的username字段传输为email，email传输为name，避免bug
                     body: JSON.stringify({
-                        username: email,
-                        email: name,
+                        username: name,
+                        email: email,
                         password: password
                     })
                 });

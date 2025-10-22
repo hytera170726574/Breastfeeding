@@ -47,7 +47,7 @@ def login():
         # 验证输入数据
         login_data = UserLogin(**request.json)
 
-        # 查找用户
+        # 查找用户（通过用户名）
         user = User.query.filter_by(username=login_data.username).first()
 
         # 验证用户和密码

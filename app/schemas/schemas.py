@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
 
 # 婴儿相关
 class BabyCreate(BaseModel):
+    print("创建婴儿数据:")
     name: str = Field(..., min_length=1, max_length=100)
     birth_date: date
     gender: Optional[str] = Field(None, regex='^(male|female|other)$')

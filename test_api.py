@@ -45,30 +45,30 @@ def test_api():
         print(f"登录请求失败: {e}")
         return
     #2.1Getbaby
-    response = requests.get
+    # response = requests.get
     
-    # # 3. 创建婴儿
-    # print("\n3. 测试创建婴儿...")
-    # baby_data = {
-    #     "name": "李望舒",
-    #     "birth_date": "2025-08-07",
-    #     "gender": "female"
-    #     # "id":,
-    # }
+    # 3. 创建婴儿
+    print("\n3. 测试创建婴儿...")
+    baby_data = {
+        "name": "李望舒2",
+        "birth_date": "2025-08-06",
+        "gender": "female"
+        # "id":,
+    }
 
-    # try:
-    #     response = requests.post(f"{BASE_URL}/baby/", json=baby_data, headers=headers)
-    #     baby_result = response.json()
-    #     print(f"创建婴儿响应: {response.status_code} - {baby_result}")
+    try:
+        response = requests.post(f"{BASE_URL}/baby/createBaby", json=baby_data, headers=headers)
+        baby_result = response.json()
+        print(f"创建婴儿响应: {response.status_code} - {baby_result}")
 
-    #     # 获取婴儿ID
-    #     baby_id = baby_result['data']['id'] if 'data' in baby_result else baby_result.get('baby', {}).get('id')
-    #     if not baby_id:
-    #         print("创建婴儿失败，无法获取婴儿ID")
-    #         return
-    # except Exception as e:
-    #     print(f"创建婴儿请求失败: {e}")
-    #     return
+        # 获取婴儿ID
+        baby_id = baby_result['data']['id'] if 'data' in baby_result else baby_result.get('baby', {}).get('id')
+        if not baby_id:
+            print("创建婴儿失败，无法获取婴儿ID")
+            return
+    except Exception as e:
+        print(f"创建婴儿请求失败: {e}")
+        return
 
     # # 4. 设置默认婴儿
     # print("\n4. 测试设置默认婴儿...")
