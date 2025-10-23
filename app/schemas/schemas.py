@@ -180,3 +180,84 @@ class DiaperStats(BaseModel):
 class SleepStats(BaseModel):
     date: str
     total_sleep_minutes: float
+
+# 母乳余量与吸奶相关
+class MilkPumpCreate(BaseModel):
+    baby_id: int
+    volume_ml: int
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class BottleBreastCreate(BaseModel):
+    baby_id: int
+    volume_ml: int
+    timestamp: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class MilkInventoryResponse(BaseModel):
+    baby_id: int
+    remaining_ml: int
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# 亲喂（独立）
+class DirectBreastStart(BaseModel):
+    baby_id: int
+    start_time: datetime
+    side: Optional[str] = Field(None, regex='^(left|right|both)$')
+    notes: Optional[str] = None
+
+class DirectBreastEnd(BaseModel):
+    end_time: datetime
+    notes: Optional[str] = None
+
+class DirectBreastResponse(BaseModel):
+    id: int
+    baby_id: int
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    duration_minutes: Optional[float] = None
+    side: Optional[str] = None
+    notes: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+# 瓶喂母乳（独立）
+class BottleBreastCreate(BaseModel):
+    baby_id: int
+    volume_ml: int
+    timestamp: Optional[datetime] = None
+    notes: Optional[str] = None
+
+class BottleBreastResponse(BaseModel):
+    id: int
+    baby_id: int
+    volume_ml: int
+    timestamp: datetime
+    notes: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+# 配方奶粉（独立）
+class FormulaFeedingCreate(BaseModel):
+    baby_id: int
+    volume_ml: int
+    timestamp: Optional[datetime] = None
+    brand: Optional[str] = None
+    notes: Optional[str] = None
+
+class FormulaFeedingResponse(BaseModel):
+    id: int
+    baby_id: int
+    volume_ml: int
+    timestamp: datetime
+    brand: Optional[str] = None
+    notes: Optional[str] = None
+
+    class Config:
+        orm_mode = True

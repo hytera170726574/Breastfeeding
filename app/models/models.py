@@ -130,3 +130,74 @@ class Sleep(db.Model):
 
     def __repr__(self):
         return f'<Sleep {self.id}>'
+
+class MilkInventory(db.Model):
+    """每个婴儿的母乳余量（毫升）"""
+    id = db.Column(db.Integer, primary_key=True)
+    baby_id = db.Column(db.Integer, db.ForeignKey('baby.id'), nullable=False, unique=True)
+    remaining_ml = db.Column(db.Integer, nullable=False, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<MilkInventory baby={self.baby_id} remaining={self.remaining_ml}ml>'
+
+class MilkPump(db.Model):
+    """吸奶记录（泵奶）"""
+    id = db.Column(db.Integer, primary_key=True)
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+    volume_ml = db.Column(db.Integer, nullable=False)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    baby_id = db.Column(db.Integer, db.ForeignKey('baby.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<MilkPump {self.id} {self.volume_ml}ml>'
+
+class DirectBreastfeeding(db.Model):
+    """亲喂记录（开始/结束）"""
+    id = db.Column(db.Integer, primary_key=True)
+    start_time = db.Column(db.DateTime, nullable=False)
+    end_time = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text)
+    side = db.Column(db.String(10))  # 可选: left/right/both
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    baby_id = db.Column(db.Integer, db.ForeignKey('baby.id'), nullable=False)
+
+    @property
+    def duration_minutes(self):
+        if self.end_time and self.start_time:
+            return (self.end_time - self.start_time).total_seconds() / 60
+        return 0
+
+    def __repr__(self):
+        return f'<DirectBreastfeeding {self.id}>'
+
+class BottleBreastFeeding(db.Model):
+    """瓶喂母乳记录"""
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    volume_ml = db.Column(db.Integer, nullable=False)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    baby_id = db.Column(db.Integer, db.ForeignKey('baby.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<BottleBreastFeeding {self.id} {self.volume_ml}ml>'
+
+class FormulaFeeding(db.Model):
+    """配方奶粉喂养记录"""
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    volume_ml = db.Column(db.Integer, nullable=False)
+    brand = db.Column(db.String(100))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    baby_id = db.Column(db.Integer, db.ForeignKey('baby.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<FormulaFeeding {self.id} {self.volume_ml}ml>'

@@ -1,7 +1,30 @@
 from flask import Blueprint, request, jsonify
 from app import db
-from app.models.models import Feeding
-from app.schemas.schemas import FeedingCreate, BottleFeedingCreate, BreastFeedingStart, BreastFeedingEnd, FeedingUpdate, FeedingResponse
+from app.models.models import (
+    Feeding,
+    MilkInventory,
+    MilkPump,
+    DirectBreastfeeding,
+    BottleBreastFeeding,
+    FormulaFeeding,
+)
+from app.schemas.schemas import (
+    FeedingCreate,
+    BottleFeedingCreate,
+    BreastFeedingStart,
+    BreastFeedingEnd,
+    FeedingUpdate,
+    FeedingResponse,
+    MilkPumpCreate,
+    BottleBreastCreate,
+    MilkInventoryResponse,
+    DirectBreastStart,
+    DirectBreastEnd,
+    DirectBreastResponse,
+    FormulaFeedingCreate,
+    FormulaFeedingResponse,
+    BottleBreastResponse,
+)
 from app.utils.helpers import get_current_user, success_response, error_response
 from flask_jwt_extended import jwt_required
 from datetime import datetime
@@ -80,6 +103,125 @@ def create_bottle_feeding():
     except Exception as e:
         db.session.rollback()
         return error_response(f'创建奶粉喂养记录失败: {str(e)}')
+
+@feeding_bp.route('/breastToPump', methods=['POST'])
+@jwt_required()
+def breast_to_pump():
+    """记录吸奶时间和吸奶量，并累加剩余母乳量"""
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        data = MilkPumpCreate(**request.json)
+
+        # 权限校验
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=data.baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        # 创建吸奶记录
+        pump = MilkPump(
+            baby_id=data.baby_id,
+            start_time=data.start_time,
+            end_time=data.end_time,
+            volume_ml=data.volume_ml,
+            notes=data.notes
+        )
+        db.session.add(pump)
+
+        # 更新或创建余量
+        inv = MilkInventory.query.filter_by(baby_id=data.baby_id).first()
+        if not inv:
+            inv = MilkInventory(baby_id=data.baby_id, remaining_ml=0)
+            db.session.add(inv)
+        inv.remaining_ml = (inv.remaining_ml or 0) + data.volume_ml
+        inv.updated_at = datetime.utcnow()
+
+        db.session.commit()
+
+        return success_response('吸奶记录成功，余量已更新', {
+            'pump_id': pump.id,
+            'baby_id': data.baby_id,
+            'volume_ml': data.volume_ml,
+            'remaining_ml': inv.remaining_ml
+        }, 201)
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'记录吸奶失败: {str(e)}')
+
+@feeding_bp.route('/breastBottle', methods=['POST'])
+@jwt_required()
+def breast_bottle_feed():
+    """记录瓶喂母乳并扣减剩余母乳量"""
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        data = BottleBreastCreate(**request.json)
+
+        # 权限校验
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=data.baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        inv = MilkInventory.query.filter_by(baby_id=data.baby_id).first()
+        if not inv:
+            inv = MilkInventory(baby_id=data.baby_id, remaining_ml=0)
+            db.session.add(inv)
+            db.session.flush()
+
+        if (inv.remaining_ml or 0) < data.volume_ml:
+            return error_response('剩余母乳量不足', 400)
+
+        # 创建瓶喂记录（使用 Feeding 表，标记为 bottle）
+        feeding = Feeding(
+            feeding_type='bottle',
+            start_time=data.timestamp,
+            bottle_ml=data.volume_ml,
+            baby_id=data.baby_id,
+        )
+        db.session.add(feeding)
+
+        # 扣减余量
+        inv.remaining_ml = (inv.remaining_ml or 0) - data.volume_ml
+        inv.updated_at = datetime.utcnow()
+
+        db.session.commit()
+
+        return success_response('瓶喂母乳记录成功，余量已更新', {
+            'feeding_id': feeding.id,
+            'baby_id': data.baby_id,
+            'volume_ml': data.volume_ml,
+            'remaining_ml': inv.remaining_ml
+        }, 201)
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'记录瓶喂母乳失败: {str(e)}')
+
+@feeding_bp.route('/breast/remaining/<int:baby_id>', methods=['GET'])
+@jwt_required()
+def get_breast_remaining(baby_id):
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        inv = MilkInventory.query.filter_by(baby_id=baby_id).first()
+        remaining = inv.remaining_ml if inv else 0
+        updated_at = (inv.updated_at if inv else datetime.utcnow())
+        resp = MilkInventoryResponse(baby_id=baby_id, remaining_ml=remaining, updated_at=updated_at)
+        return success_response('获取剩余母乳量成功', resp.dict(), 200)
+    except Exception as e:
+        return error_response(f'获取剩余母乳量失败: {str(e)}')
 
 @feeding_bp.route('/breast/start', methods=['POST'])
 @jwt_required()
@@ -336,3 +478,237 @@ def delete_feeding(feeding_id):
     except Exception as e:
         db.session.rollback()
         return error_response(f'删除喂养记录失败: {str(e)}')
+
+# ================== 新独立接口：亲喂 ==================
+@feeding_bp.route('/direct/start', methods=['POST'])
+@jwt_required()
+def direct_breast_start():
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        data = DirectBreastStart(**request.json)
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=data.baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        rec = DirectBreastfeeding(
+            baby_id=data.baby_id,
+            start_time=data.start_time,
+            side=data.side,
+            notes=data.notes,
+        )
+        db.session.add(rec)
+        db.session.commit()
+
+        return success_response('亲喂开始记录成功', DirectBreastResponse.from_orm(rec).dict(), 201)
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'记录亲喂开始失败: {str(e)}')
+
+@feeding_bp.route('/direct/<int:rec_id>/end', methods=['PUT'])
+@jwt_required()
+def direct_breast_end(rec_id):
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        rec = DirectBreastfeeding.query.filter_by(id=rec_id).first()
+        if not rec:
+            return error_response('亲喂记录不存在', 404)
+        baby = rec.baby
+        if baby.user_id != current_user.id:
+            return error_response('无权限访问该记录', 403)
+
+        data = DirectBreastEnd(**request.json)
+        rec.end_time = data.end_time
+        if data.notes is not None:
+            rec.notes = data.notes
+
+        db.session.commit()
+        return success_response('亲喂结束记录成功', DirectBreastResponse.from_orm(rec).dict(), 200)
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'记录亲喂结束失败: {str(e)}')
+
+@feeding_bp.route('/direct/<int:baby_id>', methods=['GET'])
+@jwt_required()
+def list_direct_breast(baby_id):
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        q = DirectBreastfeeding.query.filter_by(baby_id=baby_id).order_by(DirectBreastfeeding.start_time.desc())
+        if start_date:
+            from datetime import datetime as dt
+            try:
+                sd = dt.fromisoformat(start_date)
+                q = q.filter(DirectBreastfeeding.start_time >= sd)
+            except ValueError:
+                return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        if end_date:
+            from datetime import datetime as dt
+            try:
+                ed = dt.fromisoformat(end_date)
+                q = q.filter(DirectBreastfeeding.start_time <= ed)
+            except ValueError:
+                return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        recs = q.all()
+        data = [DirectBreastResponse.from_orm(r).dict() for r in recs]
+        return success_response('获取亲喂记录成功', data, 200)
+    except Exception as e:
+        return error_response(f'获取亲喂记录失败: {str(e)}')
+
+# ================== 新独立接口：瓶喂母乳 ==================
+@feeding_bp.route('/breast-bottle', methods=['POST'])
+@jwt_required()
+def create_breast_bottle():
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        data = BottleBreastCreate(**request.json)
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=data.baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        inv = MilkInventory.query.filter_by(baby_id=data.baby_id).first()
+        if not inv:
+            inv = MilkInventory(baby_id=data.baby_id, remaining_ml=0)
+            db.session.add(inv)
+            db.session.flush()
+        if (inv.remaining_ml or 0) < data.volume_ml:
+            return error_response('剩余母乳量不足', 400)
+
+        rec = BottleBreastFeeding(
+            baby_id=data.baby_id,
+            timestamp=data.timestamp or datetime.utcnow(),
+            volume_ml=data.volume_ml,
+            notes=data.notes,
+        )
+        db.session.add(rec)
+
+        inv.remaining_ml = (inv.remaining_ml or 0) - data.volume_ml
+        inv.updated_at = datetime.utcnow()
+
+        db.session.commit()
+        return success_response('瓶喂母乳记录成功', BottleBreastResponse.from_orm(rec).dict() | {'remaining_ml': inv.remaining_ml}, 201)
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'记录瓶喂母乳失败: {str(e)}')
+
+@feeding_bp.route('/breast-bottle/<int:baby_id>', methods=['GET'])
+@jwt_required()
+def list_breast_bottle(baby_id):
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        q = BottleBreastFeeding.query.filter_by(baby_id=baby_id).order_by(BottleBreastFeeding.timestamp.desc())
+        if start_date:
+            from datetime import datetime as dt
+            try:
+                sd = dt.fromisoformat(start_date)
+                q = q.filter(BottleBreastFeeding.timestamp >= sd)
+            except ValueError:
+                return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        if end_date:
+            from datetime import datetime as dt
+            try:
+                ed = dt.fromisoformat(end_date)
+                q = q.filter(BottleBreastFeeding.timestamp <= ed)
+            except ValueError:
+                return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        recs = q.all()
+        data = [BottleBreastResponse.from_orm(r).dict() for r in recs]
+        return success_response('获取瓶喂母乳记录成功', data, 200)
+    except Exception as e:
+        return error_response(f'获取瓶喂母乳记录失败: {str(e)}')
+
+# ================== 新独立接口：配方奶粉 ==================
+@feeding_bp.route('/formula', methods=['POST'])
+@jwt_required()
+def create_formula():
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        data = FormulaFeedingCreate(**request.json)
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=data.baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        rec = FormulaFeeding(
+            baby_id=data.baby_id,
+            timestamp=data.timestamp or datetime.utcnow(),
+            volume_ml=data.volume_ml,
+            brand=data.brand,
+            notes=data.notes,
+        )
+        db.session.add(rec)
+        db.session.commit()
+        return success_response('配方奶粉记录成功', FormulaFeedingResponse.from_orm(rec).dict(), 201)
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'记录配方奶粉失败: {str(e)}')
+
+@feeding_bp.route('/formula/<int:baby_id>', methods=['GET'])
+@jwt_required()
+def list_formula(baby_id):
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        q = FormulaFeeding.query.filter_by(baby_id=baby_id).order_by(FormulaFeeding.timestamp.desc())
+        if start_date:
+            from datetime import datetime as dt
+            try:
+                sd = dt.fromisoformat(start_date)
+                q = q.filter(FormulaFeeding.timestamp >= sd)
+            except ValueError:
+                return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        if end_date:
+            from datetime import datetime as dt
+            try:
+                ed = dt.fromisoformat(end_date)
+                q = q.filter(FormulaFeeding.timestamp <= ed)
+            except ValueError:
+                return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        recs = q.all()
+        data = [FormulaFeedingResponse.from_orm(r).dict() for r in recs]
+        return success_response('获取配方奶粉记录成功', data, 200)
+    except Exception as e:
+        return error_response(f'获取配方奶粉记录失败: {str(e)}')
+
+# ================== 兼容：旧接口保留但不推荐 ==================
+# /feeding/ (POST) /feeding/bottle (POST) /feeding/breast/start /feeding/breast/<id>/end
+# 建议逐步迁移至上方新接口。
