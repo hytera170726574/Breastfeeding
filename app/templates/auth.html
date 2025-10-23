@@ -6,62 +6,15 @@
     <title>母乳喂养记录系统</title>
     <!-- 引入Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/app.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        /* 自定义动画 */
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .float {
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        .float-delay-1 {
-            animation-delay: 1s;
-        }
-        
-        .float-delay-2 {
-            animation-delay: 2s;
-        }
-        
-        .float-delay-3 {
-            animation-delay: 3s;
-        }
-        
-        /* 加载动画 */
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 3px solid #3498db;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        body { font-family: 'Inter', sans-serif; }
+        /* specific form layout tweaks remain inline or could be moved to shared css */
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen flex items-center justify-center p-4">
-    <!-- 装饰性圆点 -->
-    <div class="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div class="absolute w-64 h-64 bg-pink-200 rounded-full opacity-30 float -top-16 -left-16"></div>
-        <div class="absolute w-80 h-80 bg-blue-200 rounded-full opacity-40 float float-delay-1 top-1/4 -right-20"></div>
-        <div class="absolute w-72 h-72 bg-purple-200 rounded-full opacity-30 float float-delay-2 bottom-1/4 -left-20"></div>
-        <div class="absolute w-60 h-60 bg-yellow-200 rounded-full opacity-40 float float-delay-3 -bottom-16 right-1/4"></div>
-        <div class="absolute w-96 h-96 bg-green-200 rounded-full opacity-20 float top-1/3 left-1/4"></div>
-    </div>
+    {% include '_decorative_circles.html' %}
 
     <div class="w-full max-w-4xl flex flex-col md:flex-row bg-white rounded-2xl shadow-xl overflow-hidden z-10">
         <!-- 左侧欢迎区域 -->
@@ -130,7 +83,7 @@
                     <a href="#" class="text-sm text-blue-600 hover:text-blue-500">忘记密码?</a>
                 </div>
 
-                <button type="submit" id="login-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex justify-center items-center">
+                <button aria-label="登录" type="submit" id="login-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex justify-center items-center">
                     <span id="login-text">登录</span>
                     <div id="login-loader" class="loader hidden"></div>
                 </button>
@@ -165,7 +118,7 @@
                     <label for="agree-terms" class="ml-2 block text-sm text-gray-700">我同意 <a href="#" class="text-blue-600 hover:text-blue-500">服务条款</a> 和 <a href="#" class="text-blue-600 hover:text-blue-500">隐私政策</a></label>
                 </div>
                 
-                <button type="submit" id="register-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex justify-center items-center">
+                <button aria-label="注册" type="submit" id="register-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 flex justify-center items-center">
                     <span id="register-text">注册</span>
                     <div id="register-loader" class="loader hidden"></div>
                 </button>

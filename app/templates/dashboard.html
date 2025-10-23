@@ -5,201 +5,251 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>母乳喂养记录系统 - 主界面</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="stylesheet" href="/static/css/clock3d.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            /* Use same gentle gradient as the auth page for a unified look */
+            background: linear-gradient(135deg, #f0f9ff 0%, #f5e8ff 100%);
             min-height: 100vh;
         }
         
         .floating-card {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border-radius: 24px;
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.9);
+            /* Slightly smaller than full 90% so background dots are visible */
+            width: 82vw;
+            height: 85vh;
+            max-width: none;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.06);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            /* a bit more transparent so decorative dots can subtly show through */
+            background: rgba(255, 255, 255, 0.92);
+            overflow: auto;
         }
         
         .main-button {
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.25s ease;
+            box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.12);
+            width: 100%; /* make buttons fill their grid cell */
+            padding-top: 1.25rem;
+            padding-bottom: 1.25rem;
         }
         
         .main-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform: translateY(-6px);
+            box-shadow: 0 30px 30px -10px rgba(0, 0, 0, 0.12);
         }
         
-        .pulse {
-            animation: pulse 2s infinite;
+        /* page-specific small helpers kept inline */
+        /* Baby-info card refinement to match auth page light card */
+        #baby-info {
+            border: 1px solid rgba(15, 23, 42, 0.04);
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
+        }
+
+        /* Larger screens: keep baby-info sticky in right column (so it won't overlap grid flow) */
+        @media (min-width: 768px) {
+            #baby-info { position: sticky; top: 1rem; }
         }
         
-        @keyframes pulse {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7);
-            }
-            
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
-            }
-            
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0);
-            }
+        /* Small-screen adjustments */
+        @media (max-width: 768px) {
+            .floating-card { width: 95vw; height: auto; max-height: 95vh; }
+            #baby-info { position: static; width: auto; margin-bottom: 12px; }
         }
         
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+        /* fadeIn, float, loader and related keyframes are in shared CSS */
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
+    {% include '_decorative_circles.html' %}
+
     <!-- 主界面 -->
-    <div id="main-interface" class="w-full max-w-4xl floating-card p-8 relative fade-in">
-        <!-- 右上角婴儿信息 -->
-        <div id="baby-info" class="absolute top-4 right-4 bg-white rounded-xl shadow-md p-4 w-64">
-            <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-gray-800">我的宝宝</h3>
-                <button id="edit-baby-btn" class="text-blue-500 hover:text-blue-700 text-sm">
-                    编辑
-                </button>
-            </div>
-            <div id="baby-details" class="space-y-2">
-                <!-- 婴儿信息将在这里动态加载 -->
-                <div class="flex justify-between">
-                    <span class="text-gray-600">姓名:</span>
-                    <span id="baby-name" class="font-medium">未设置</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">性别:</span>
-                    <span id="baby-gender" class="font-medium">未知</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">出生日期:</span>
-                    <span id="baby-birthdate" class="font-medium">未设置</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">月龄:</span>
-                    <span id="baby-age" class="font-medium">-</span>
-                </div>
-            </div>
-        </div>
+    <div id="main-interface" class="w-full max-w-4xl floating-card p-8 relative fade-in z-10">
 
-        <!-- 主标题 -->
-        <div class="text-center mb-12 mt-4">
-            <h1 class="text-3xl font-bold text-gray-800">母乳喂养记录</h1>
-            <p class="text-gray-600 mt-2">记录宝宝成长的每一个珍贵时刻</p>
-        </div>
+        <div class="flex flex-col md:flex-row gap-6">
+            <!-- 左侧欢迎区域：统一风格 -->
+            <div class="md:w-2/5 bg-gradient-to-br from-blue-500 to-purple-600 text-white p-8 rounded-lg">
+                <h1 class="text-3xl font-bold">母乳喂养记录</h1>
+                <p class="mt-3 text-blue-100">记录宝宝成长的每一个珍贵时刻</p>
+                <div class="mt-6 space-y-3">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-white bg-opacity-20 flex items-center justify-center mr-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span>记录喂养时间和时长</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-white bg-opacity-20 flex items-center justify-center mr-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span>跟踪宝宝体重变化</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-white bg-opacity-20 flex items-center justify-center mr-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span>生成喂养统计报告</span>
+                    </div>
+                </div>
+            </div>
 
-        <!-- 四个主按钮 -->
-        <div class="flex flex-col items-center justify-center">
-            <!-- 上方按钮 -->
-            <div class="mb-8">
-                <button class="main-button bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-2xl text-lg flex items-center justify-center w-48">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    亲喂
-                </button>
-            </div>
-            
-            <div class="flex items-center justify-between w-full max-w-md">
-                <!-- 左侧按钮 -->
-                <button class="main-button bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-8 rounded-2xl text-lg flex items-center justify-center w-48">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    睡眠
-                </button>
-                
-                <!-- 右侧按钮 -->
-                <button class="main-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-2xl text-lg flex items-center justify-center w-48">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    瓶喂
-                </button>
-            </div>
-            
-            <!-- 下方按钮 -->
-            <div class="mt-8">
-                <button class="main-button bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 px-8 rounded-2xl text-lg flex items-center justify-center w-48">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    记录
-                </button>
-            </div>
-        </div>
-        
-        <!-- 底部统计信息 -->
-        <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white rounded-xl p-4 shadow text-center">
-                <p class="text-gray-600">今日喂养次数</p>
-                <p class="text-2xl font-bold text-green-500">3</p>
-            </div>
-            <div class="bg-white rounded-xl p-4 shadow text-center">
-                <p class="text-gray-600">今日睡眠时长</p>
-                <p class="text-2xl font-bold text-yellow-500">5.2h</p>
-            </div>
-            <div class="bg-white rounded-xl p-4 shadow text-center">
-                <p class="text-gray-600">上次记录时间</p>
-                <p class="text-xl font-bold text-blue-500">2小时前</p>
+            <!-- 右侧：按钮与统计 -->
+            <div class="md:w-3/5 p-4">
+                <!-- 右侧顶部宝宝信息（非绝对定位，避免遮挡按钮） -->
+                <div id="baby-info" class="bg-white rounded-xl shadow-md p-4 w-full mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-lg font-semibold text-gray-800">我的宝宝</h3>
+                        <button id="edit-baby-btn" class="text-blue-500 hover:text-blue-700 text-sm">编辑</button>
+                    </div>
+                    <div id="baby-details" class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">姓名:</span>
+                            <span id="baby-name" class="font-medium">未设置</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">性别:</span>
+                            <span id="baby-gender" class="font-medium">未知</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">出生日期:</span>
+                            <span id="baby-birthdate" class="font-medium">未设置</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">月龄:</span>
+                            <span id="baby-age" class="font-medium">-</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- 四个主按钮：使用响应式网格，水平均匀分布 -->
+                <div class="w-full">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div>
+                    <button aria-label="亲喂" class="main-button bg-green-500 hover:bg-green-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                        亲喂
+                    </button>
+                </div>
+
+                <div>
+                    <button id="sleep-button" aria-label="睡眠" class="main-button bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        睡眠
+                    </button>
+                </div>
+
+                <div>
+                    <button aria-label="瓶喂" class="main-button bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        瓶喂
+                    </button>
+                </div>
+
+                <div>
+                    <button aria-label="记录" class="main-button bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        记录
+                    </button>
+                </div>
+                    </div> <!-- .grid -->
+                    
+                </div> <!-- .w-full (buttons) -->
+
+                <!-- 底部统计信息 (仍在右侧列) -->
+                <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-xl p-4 shadow text-center">
+                        <p class="text-gray-600">今日喂养次数</p>
+                        <p class="text-2xl font-bold text-green-500">3</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-4 shadow text-center">
+                        <p class="text-gray-600">今日睡眠时长</p>
+                        <p class="text-2xl font-bold text-yellow-500">5.2h</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-4 shadow text-center">
+                        <p class="text-gray-600">上次记录时间</p>
+                        <p class="text-xl font-bold text-blue-500">2小时前</p>
+                    </div>
+                </div>
+            </div> <!-- .md:w-3/5 (right column) -->
+        </div> <!-- .flex (main split) -->
+    </div> <!-- #main-interface -->
+
+    <!-- 3D Timer Modal -->
+    <div id="timer3d-modal" class="hidden" aria-hidden="true">
+        <div id="timer3d-backdrop" class="timer3d-modal-backdrop"></div>
+        <div class="timer3d-wrap">
+            <div class="timer3d-card">
+                <button id="timer3d-stop" class="timer3d-stop-btn">停止</button>
+                <div id="timer3d-display"></div>
             </div>
         </div>
     </div>
 
-    <!-- 创建婴儿界面 -->
-    <div id="create-baby-interface" class="w-full max-w-md floating-card p-8 hidden">
-        <div class="text-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-800">添加宝宝信息</h2>
-            <p class="text-gray-600 mt-2">请填写宝宝的基本信息</p>
+    <!-- 创建婴儿模态（覆盖层） -->
+    <div id="create-baby-modal" class="hidden">
+        <div id="create-baby-backdrop" class="modal-backdrop"></div>
+        <div class="fixed inset-0 z-40 flex items-center justify-center p-4">
+            <div role="dialog" aria-modal="true" aria-labelledby="create-baby-title" class="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6">
+                <div class="text-center mb-4">
+                    <h2 id="create-baby-title" class="text-2xl font-bold text-gray-800">添加宝宝信息</h2>
+                    <p class="text-gray-600 mt-2">请填写宝宝的基本信息</p>
+                </div>
+
+                <form id="create-baby-form" class="space-y-4">
+                    <div>
+                        <label for="baby-name-input" class="block text-sm font-medium text-gray-700 mb-1">宝宝姓名</label>
+                        <input type="text" id="baby-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入宝宝姓名" required>
+                    </div>
+                    
+                    <div>
+                        <label for="baby-gender-select" class="block text-sm font-medium text-gray-700 mb-1">宝宝性别</label>
+                        <select id="baby-gender-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="">请选择性别</option>
+                            <option value="boy">男宝宝</option>
+                            <option value="girl">女宝宝</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="baby-birthdate-data" class="block text-sm font-medium text-gray-700 mb-1">出生日期</label>
+                        <input type="date" id="baby-birthdate-data" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    
+                    <div>
+                        <label for="baby-weight" class="block text-sm font-medium text-gray-700 mb-1">出生体重 (kg)</label>
+                        <input type="number" step="0.01" id="baby-weight" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="例如: 3.2">
+                    </div>
+                    
+                    <div class="flex space-x-4 pt-4">
+                        <button type="button" id="cancel-create-baby" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-200">取消</button>
+                        <button type="submit" id="save-baby-btn" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200 flex items-center justify-center">
+                            <span id="save-baby-text">保存</span>
+                            <span id="save-baby-loader" class="loader hidden" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div id="create-baby-message" role="status" aria-live="polite" class="text-sm text-center mt-2 hidden"></div>
+                </form>
+            </div>
         </div>
-        
-        <form id="create-baby-form" class="space-y-4">
-            <div>
-                <label for="baby-name-input" class="block text-sm font-medium text-gray-700 mb-1">宝宝姓名</label>
-                <input type="text" id="baby-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="请输入宝宝姓名" required>
-            </div>
-            
-            <div>
-                <label for="baby-gender-select" class="block text-sm font-medium text-gray-700 mb-1">宝宝性别</label>
-                <select id="baby-gender-select" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-                    <option value="">请选择性别</option>
-                    <option value="boy">男宝宝</option>
-                    <option value="girl">女宝宝</option>
-                </select>
-            </div>
-            
-            <div>
-                <label for="baby-birthdate-data" class="block text-sm font-medium text-gray-700 mb-1">出生日期</label>
-                <input type="date" id="baby-birthdate-data" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
-            </div>
-            
-            <div>
-                <label for="baby-weight" class="block text-sm font-medium text-gray-700 mb-1">出生体重 (kg)</label>
-                <input type="number" step="0.01" id="baby-weight" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="例如: 3.2">
-            </div>
-            
-            <div class="flex space-x-4 pt-4">
-                <button type="button" id="cancel-create-baby" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-200">
-                    取消
-                </button>
-                <button type="submit" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">
-                    保存
-                </button>
-            </div>
-        </form>
     </div>
+
+    
 
     <script>
         // 模拟从后端获取用户婴儿信息
@@ -281,32 +331,106 @@
                     updateBabyInfo(babyInfo.baby);
                 } else {
                     // 用户没有婴儿，显示创建婴儿界面
-                    showCreateBabyInterface();
+                    showCreateBabyModal();
                 }
             } catch (error) {
                 console.error('获取婴儿信息失败:', error);
                 // 默认显示创建婴儿界面
-                showCreateBabyInterface();
+                showCreateBabyModal();
             }
         });
 
-        // 显示主界面
+        // 显示主界面（主界面仍然保持可见，当 modal 关闭时用户返回主界面）
         function showMainInterface() {
             document.getElementById('main-interface').classList.remove('hidden');
-            document.getElementById('create-baby-interface').classList.add('hidden');
         }
 
-        // 显示创建婴儿界面
-        function showCreateBabyInterface() {
-            document.getElementById('main-interface').classList.add('hidden');
-            document.getElementById('create-baby-interface').classList.remove('hidden');
+        // 显示/隐藏创建婴儿模态
+        function showCreateBabyModal() {
+            document.getElementById('create-baby-modal').classList.remove('hidden');
+            // focus first input for accessibility
+            const nameInput = document.getElementById('baby-name-input');
+            if (nameInput) setTimeout(() => nameInput.focus(), 50);
         }
+
+        function hideCreateBabyModal() {
+            document.getElementById('create-baby-modal').classList.add('hidden');
+        }
+
+        // Close modal on ESC and implement focus trap when modal open
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('create-baby-modal');
+            if (!modal) return;
+
+            // Escape closes modal
+            if (e.key === 'Escape') {
+                if (!modal.classList.contains('hidden')) {
+                    hideCreateBabyModal();
+                }
+            }
+
+            // Focus trap: if modal open, trap tab within modal dialog
+            if (!modal.classList.contains('hidden') && e.key === 'Tab') {
+                const focusable = modal.querySelectorAll('a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])');
+                if (focusable.length === 0) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+
+                if (e.shiftKey) { // shift + tab
+                    if (document.activeElement === first) {
+                        e.preventDefault();
+                        last.focus();
+                    }
+                } else { // tab
+                    if (document.activeElement === last) {
+                        e.preventDefault();
+                        first.focus();
+                    }
+                }
+            }
+        });
+
+        // Click on backdrop closes modal
+        document.addEventListener('click', function(e) {
+            const backdrop = document.getElementById('create-baby-backdrop');
+            if (backdrop && e.target === backdrop) {
+                hideCreateBabyModal();
+            }
+        });
+
+        // 3D Timer modal helpers
+        let timer3dInstance = null;
+        function openTimer3D(serverStartIso){
+            const modal = document.getElementById('timer3d-modal');
+            const display = document.getElementById('timer3d-display');
+            if (!modal || !display) return;
+            modal.classList.remove('hidden');
+            if (timer3dInstance) { timer3dInstance.stop(); timer3dInstance = null; }
+            timer3dInstance = new Timer3D(display);
+            timer3dInstance.start(serverStartIso);
+        }
+        function closeTimer3D(){
+            const modal = document.getElementById('timer3d-modal');
+            if (timer3dInstance){ timer3dInstance.stop(); timer3dInstance = null; }
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // 当前选择的婴儿 ID（用于记录请求）
+    let currentBabyId = localStorage.getItem('currentBabyId') ? parseInt(localStorage.getItem('currentBabyId')) : null;
+        // 当前正在进行的睡眠记录 ID
+        let currentSleepId = null;
+    // 已移除计时器 interval 相关逻辑
 
         // 更新婴儿信息
         function updateBabyInfo(baby) {
             document.getElementById('baby-name').textContent = baby.name || '未设置';
             document.getElementById('baby-gender').textContent = baby.gender === 'male' ? '男' : baby.gender === 'female' ? '女' : '未知';
             document.getElementById('baby-birthdate').textContent = baby.birth_date || '未设置';
+            // 保存当前婴儿 ID
+            if (baby.id) {
+                currentBabyId = baby.id;
+                localStorage.setItem('currentBabyId', baby.id);
+            }
             
             // 计算月龄
             if (baby.birth_date) {
@@ -381,6 +505,16 @@
                 birth_date
             };
             console.log("发送的创建婴儿数据:", JSON.stringify(formData));
+            // UX: 显示 loader 并禁用按钮
+            const saveBtn = document.getElementById('save-baby-btn');
+            const saveText = document.getElementById('save-baby-text');
+            const saveLoader = document.getElementById('save-baby-loader');
+            const msgEl = document.getElementById('create-baby-message');
+            if (msgEl) { msgEl.classList.add('hidden'); msgEl.textContent = ''; }
+            if (saveBtn) saveBtn.disabled = true;
+            if (saveLoader) saveLoader.classList.remove('hidden');
+            if (saveText) saveText.textContent = '保存中...';
+
             try {
                 const response = await fetch('/api/baby/createBaby', {
                     method: 'POST',
@@ -395,43 +529,151 @@
                     const data = await response.json();
                     console.log('创建婴儿成功:', data);
 
-                    // 更新婴儿信息并显示主界面
+                    // 更新婴儿信息并显示成功消息
                     updateBabyInfo(data);
-                    showMainInterface();
+                    if (msgEl) { msgEl.textContent = '宝宝信息创建成功！'; msgEl.classList.remove('hidden'); msgEl.classList.remove('text-red-500'); msgEl.classList.add('text-green-500'); }
 
-                    alert('宝宝信息创建成功！');
+                    // 关闭模态并重置按钮（稍作延迟以便用户看到消息）
+                    setTimeout(() => {
+                        hideCreateBabyModal();
+                        if (saveBtn) saveBtn.disabled = false;
+                        if (saveLoader) saveLoader.classList.add('hidden');
+                        if (saveText) saveText.textContent = '保存';
+                    }, 900);
                 } else {
                     console.error('创建婴儿失败，状态码:', response.status);
-                    alert('创建失败，请稍后重试');
+                    if (msgEl) { msgEl.textContent = '创建失败，请稍后重试'; msgEl.classList.remove('hidden'); msgEl.classList.remove('text-green-500'); msgEl.classList.add('text-red-500'); }
+                    if (saveBtn) saveBtn.disabled = false;
+                    if (saveLoader) saveLoader.classList.add('hidden');
+                    if (saveText) saveText.textContent = '保存';
                 }
             } catch (error) {
                 console.error('创建婴儿时发生错误:', error);
-                alert('创建失败，请稍后重试');
+                if (msgEl) { msgEl.textContent = '网络错误，请稍后重试'; msgEl.classList.remove('hidden'); msgEl.classList.remove('text-green-500'); msgEl.classList.add('text-red-500'); }
+                if (saveBtn) saveBtn.disabled = false;
+                if (saveLoader) saveLoader.classList.add('hidden');
+                if (saveText) saveText.textContent = '保存';
             }
         });
 
-        // 取消创建婴儿
+        // 取消创建婴儿（关闭模态）
         document.getElementById('cancel-create-baby').addEventListener('click', function() {
-            // 在实际应用中，可能需要处理取消逻辑
-            // 这里我们仍然显示创建界面，因为用户必须创建婴儿才能使用系统
-            // 或者可以添加退出登录功能
-            alert('您需要创建宝宝信息才能使用系统功能');
+            hideCreateBabyModal();
         });
 
-        // 编辑婴儿信息
+        // 编辑婴儿信息：打开模态并尝试预填当前信息
         document.getElementById('edit-baby-btn').addEventListener('click', function() {
-            // 这里可以打开编辑婴儿信息的模态框或跳转到编辑页面
-            alert('编辑婴儿信息功能');
+            // 尝试读取当前显示的婴儿信息并填入表单
+            const name = document.getElementById('baby-name').textContent.trim();
+            const genderText = document.getElementById('baby-gender').textContent.trim();
+            const birth = document.getElementById('baby-birthdate').textContent.trim();
+
+            showCreateBabyModal();
+            // 填充表单（如果有值）
+            if (name && name !== '未设置') document.getElementById('baby-name-input').value = name;
+            if (genderText === '男') document.getElementById('baby-gender-select').value = 'boy';
+            if (genderText === '女') document.getElementById('baby-gender-select').value = 'girl';
+            if (birth && birth !== '未设置') document.getElementById('baby-birthdate-data').value = birth;
         });
 
         // 主按钮点击事件
         document.querySelectorAll('.main-button').forEach(button => {
             button.addEventListener('click', function() {
                 const buttonText = this.textContent.trim();
+                // 睡眠按钮有特殊行为
+                if (button.id === 'sleep-button') {
+                    // 调用开始睡眠流程
+                    startSleep();
+                    return;
+                }
                 alert(`您点击了: ${buttonText}`);
                 // 这里可以根据按钮类型跳转到相应的记录页面
             });
         });
+
+        // 已移除测试计时器按钮事件
+
+        // 开始睡眠：调用后端创建记录并打开计时器模态
+        async function startSleep() {
+            if (!currentBabyId) {
+                alert('未选择婴儿，请先设置宝宝');
+                return;
+            }
+            const token = localStorage.getItem('authToken');
+            if (!token) { alert('未登录，请先登录'); return; }
+
+            // client-side time as a fallback; server will return authoritative start_time
+            const startTime = new Date().toISOString();
+            try {
+                const res = await fetch('/api/sleep/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ start_time: startTime, baby_id: currentBabyId })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.message || '开始睡眠失败');
+                    return;
+                }
+                const data = await res.json();
+                // 后端返回了 sleep 对象，优先使用 data.data 或 data
+                currentSleepId = (data && data.data && data.data.id) || data.id || null;
+                // 打开 3D 计时器
+                const serverStartIso = (data && data.data && data.data.start_time) || data.start_time || startTime;
+                openTimer3D(serverStartIso);
+            } catch (e) {
+                console.error('startSleep error', e);
+                alert('开始睡眠请求失败');
+            }
+        }
+
+        // 打开睡眠计时器，接受可选的 serverStartIso (ISO timestamp string)
+        // 关闭与停止：按钮与遮罩
+        document.addEventListener('click', function(e){
+            const backdrop = document.getElementById('timer3d-backdrop');
+            if (backdrop && e.target === backdrop){ closeTimer3D(); }
+        });
+        const stopBtn3d = document.getElementById('timer3d-stop');
+        if (stopBtn3d){ stopBtn3d.addEventListener('click', async function(){ await stopSleep(); closeTimer3D(); }); }
+
+        // 结束睡眠
+        async function stopSleep() {
+            if (!currentSleepId) {
+                alert('未找到当前睡眠记录');
+                return;
+            }
+            const token = localStorage.getItem('authToken');
+            if (!token) { alert('未登录，请先登录'); return; }
+            const endTime = new Date().toISOString();
+            try {
+                const res = await fetch(`/api/sleep/${currentSleepId}/end`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ end_time: endTime })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.message || '结束睡眠失败');
+                    return;
+                }
+                const data = await res.json();
+                // 停止计时（关闭操作由调用处负责）
+                currentSleepId = null;
+                // 可选：更新页面统计（这里暂时简单提示）
+                alert('睡眠已结束并保存');
+            } catch (e) {
+                console.error('stopSleep error', e);
+                alert('结束睡眠请求失败');
+            }
+        }
+
+        function msToHMS(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2,'0');
+            const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2,'0');
+            const secs = String(totalSeconds % 60).padStart(2,'0');
+            return `${hrs}:${mins}:${secs}`;
+        }
 
         // 从后端获取用户信息并存储用户ID
         async function fetchUserInfo() {
@@ -471,5 +713,6 @@
         // });
 
     </script>
+    <script src="/static/js/timer3d.js"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+import logging
 from app import db
 from app.models.models import Sleep
 from app.schemas.schemas import SleepCreate, SleepUpdate, SleepResponse
@@ -7,6 +8,7 @@ from flask_jwt_extended import jwt_required
 from datetime import datetime
 
 sleep_bp = Blueprint('sleep_bp', __name__)
+logger = logging.getLogger(__name__)
 
 @sleep_bp.route('/start', methods=['POST'])
 @jwt_required()
@@ -34,7 +36,7 @@ def start_sleep():
 
         db.session.add(sleep)
         db.session.commit()
-
+        logger.info(f"Sleep started: id=%s baby_id=%s start_time=%s", sleep.id, sleep.baby_id, sleep.start_time)
         return success_response('睡眠开始记录成功', SleepResponse.from_orm(sleep).dict(), 201)
 
     except Exception as e:
@@ -70,7 +72,7 @@ def end_sleep(sleep_id):
             sleep.notes = update_data.notes
 
         db.session.commit()
-
+        logger.info(f"Sleep ended: id=%s baby_id=%s end_time=%s", sleep.id, sleep.baby_id, sleep.end_time)
         return success_response('睡眠结束记录成功', SleepResponse.from_orm(sleep).dict(), 200)
 
     except Exception as e:

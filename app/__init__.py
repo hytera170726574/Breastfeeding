@@ -1,4 +1,5 @@
 from flask import Flask
+import os
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -11,7 +12,9 @@ migrate = Migrate()
 jwt = JWTManager()
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    # Ensure Flask serves static files from the project-level 'static' directory
+    static_folder_path = os.path.join(os.path.dirname(__file__), '..', 'static')
+    app = Flask(__name__, static_folder=static_folder_path, template_folder='templates')
     app.config.from_object(config_class)
 
     # 初始化扩展

@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+/* Shared base styles used across auth and dashboard */
+body { font-family: 'Inter', sans-serif; }
+
+/* Floating decorative circles animation */
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.float { animation: float 6s ease-in-out infinite; }
+.float-delay-1 { animation-delay: 1s; }
+.float-delay-2 { animation-delay: 2s; }
+.float-delay-3 { animation-delay: 3s; }
+
+/* Loader */
+.loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #3498db; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-right: 8px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* Small shared animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.fade-in { animation: fadeIn 0.5s ease-in; }
+
+/* Pulse (used in dashboard) */
+@keyframes pulse { 0%{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79,70,229,0.7);} 70%{ transform: scale(1); box-shadow: 0 0 0 10px rgba(79,70,229,0);} 100%{ transform: scale(0.95); box-shadow: 0 0 0 0 rgba(79,70,229,0);} }
+.pulse { animation: pulse 2s infinite; }
+
+/* Shared button base used for main actions */
+.main-button { transition: all 0.25s ease; box-shadow: 0 6px 18px -6px rgba(0,0,0,0.12); width: 100%; padding-top: 1.25rem; padding-bottom: 1.25rem; display: inline-flex; align-items: center; justify-content: center; }
+.main-button:hover { transform: translateY(-6px); box-shadow: 0 30px 30px -10px rgba(0,0,0,0.12); }
+.main-button:active { transform: translateY(-2px) scale(0.995); }
+.main-button:focus { outline: none; box-shadow: 0 0 0 4px rgba(59,130,246,0.15); }
+
+/* Accessibility: visible focus for keyboard users */
+:focus { outline: none; }
+
+/* Modal backdrop utility */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(2,6,23,0.45); z-index: 30; }
+
+/* Utility to visually hide elements but keep accessible to screen readers */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
+
+/* Small-screen utility tweaks (shared) */
+@media (max-width: 768px) {
+    .floating-card { width: 95vw; height: auto; max-height: 95vh; }
+}
+
+/* Retro / pixel timer styles (用于睡眠计时器模态) */
+.mario-timer-card { background: linear-gradient(180deg,#fff7ed,#fff1f2); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); padding: 2rem; text-align:center; }
+.mario-timer-display { font-family: 'Courier New', monospace; font-size: 3.5rem; letter-spacing: .08em; color: #111827; }
+.mario-character { font-size: 3rem; display:inline-block; transform-origin: bottom center; animation: bob 1s ease-in-out infinite; margin-right: .5rem; }
+@keyframes bob { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-8px) scale(1.02);} }
+.mario-stop-btn { background: linear-gradient(180deg,#ef4444,#dc2626); color: white; padding: .75rem 1.25rem; border-radius: 12px; font-weight:600; box-shadow: 0 8px 20px rgba(239,68,68,0.18); }
+.mario-stop-btn:disabled { opacity: .6; cursor: not-allowed; }
+.mario-timer-note { color:#6b7280; margin-top:.5rem; font-size:.9rem; }
+
+.pixel-timer-screen .small { font-size: 18px; }
+
+@media (max-width: 480px) {
+    
+}
+
+/* removed timer-specific styles */

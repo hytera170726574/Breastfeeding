@@ -1,0 +1,40 @@
+<!-- Backup of sleep timer modal (flip-clock version) -->
+<style>
+  /* Inline fallback critical styles */
+  .pixel-timer-card { width: 320px; height: 320px; background: linear-gradient(180deg,#ff6b6b,#e11d48); border-radius: 9999px; display:flex; align-items:center; justify-content:center; box-shadow: 0 30px 60px rgba(225,29,72,0.18); position: relative; }
+  .flip-clock-screen { position: absolute; left:50%; top:50%; transform:translate(-50%,-50%); width: 220px; height: 160px; display:flex; align-items:center; justify-content:center; }
+  .pixel-timer-wrapper { gap: 12px; }
+  .pixel-stop-btn { background: linear-gradient(180deg,#ef4444,#b91c1c); color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight:700; box-shadow: 0 6px 16px rgba(0,0,0,0.22); cursor: pointer; font-family: 'Inter', sans-serif; }
+</style>
+<div id="sleep-timer-modal" class="hidden">
+  <div id="sleep-timer-backdrop" class="modal-backdrop"></div>
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="pixel-timer-wrapper flex flex-col items-center">
+      <button id="sleep-stop-btn" class="pixel-stop-btn" aria-label="停止睡眠计时">停止</button>
+      <div class="pixel-timer-card" role="status" aria-live="polite" style="z-index:60">
+        <div class="flip-clock-screen" id="sleep-timer-display" style="z-index:61">
+          <div class="flip-clock">
+            <div class="flip-group" data-group="minutes">
+              <div class="flip-card" data-digit="0">
+                <div class="top">000</div>
+                <div class="bottom">000</div>
+                <div class="flip-top"></div>
+                <div class="flip-bottom"></div>
+              </div>
+            </div>
+            <div class="colon">:</div>
+            <div class="flip-group" data-group="seconds">
+              <div class="flip-card" data-digit="0">
+                <div class="top">00</div>
+                <div class="bottom">00</div>
+                <div class="flip-top"></div>
+                <div class="flip-bottom"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 text-sm text-gray-700">点击上方停止按钮以结束本次睡眠记录</div>
+    </div>
+  </div>
+</div>

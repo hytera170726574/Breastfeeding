@@ -1,0 +1,28 @@
+/* 3D Timer (inspired by mrahmedayyan/3D-Digital-Clock). Lightweight reimplementation. */
+/* Attribution: Inspired by 3D-Digital-Clock (GitHub). This is an original minimal CSS, no direct code copied. */
+
+.timer3d-modal-backdrop { position: fixed; inset: 0; background: rgba(2,6,23,0.5); z-index: 40; }
+.timer3d-wrap { position: fixed; inset: 0; z-index: 50; display:flex; align-items:center; justify-content:center; padding: 16px; }
+
+.timer3d-card { width: 320px; height: 320px; border-radius: 9999px; background: radial-gradient(circle at 30% 30%, #ff7b7b, #e11d48 65%); box-shadow: 0 25px 60px rgba(225,29,72,0.25); position: relative; display:flex; align-items:center; justify-content:center; }
+
+.clock3d { display:flex; align-items:center; gap: 10px; }
+.clock3d .colon { color:#0df25d; font-family: 'Press Start 2P', monospace; font-size: 22px; text-shadow: 0 0 8px #0df25d; }
+
+.digit { position: relative; width: 84px; height: 120px; perspective: 800px; }
+.digit .face { position:absolute; left:0; right:0; height:50%; display:flex; align-items:center; justify-content:center; font-family: 'Press Start 2P', monospace; color:#0df25d; background:#000; border: 4px solid #0a0a0a; box-shadow: inset 0 6px 0 rgba(255,255,255,0.05); overflow:hidden; }
+.digit .top { top:0; border-bottom:2px solid #000; border-radius: 8px 8px 0 0; }
+.digit .bottom { bottom:0; border-top:2px solid #000; border-radius: 0 0 8px 8px; }
+
+.digit .flip-top, .digit .flip-bottom { position:absolute; left:0; right:0; height:50%; background:#000; color:#0df25d; border: 4px solid #0a0a0a; display:flex; align-items:center; justify-content:center; font-family: 'Press Start 2P', monospace; }
+.digit .flip-top { top:0; transform-origin: bottom; border-bottom:none; border-radius: 8px 8px 0 0; }
+.digit .flip-bottom { bottom:0; transform-origin: top; border-top:none; border-radius: 0 0 8px 8px; transform: rotateX(90deg); }
+
+.digit.flip .flip-top { animation: topFlip 600ms ease-in forwards; }
+.digit.flip .flip-bottom { animation: bottomFlip 600ms ease-out forwards; }
+
+@keyframes topFlip { 0% { transform: rotateX(0deg);} 100% { transform: rotateX(-90deg);} }
+@keyframes bottomFlip { 0% { transform: rotateX(90deg);} 100% { transform: rotateX(0deg);} }
+
+.timer3d-stop-btn { position:absolute; top: 16px; left: 50%; transform: translateX(-50%); background: linear-gradient(180deg,#ef4444,#b91c1c); color:#fff; border:none; padding: 10px 18px; border-radius: 10px; font-weight:700; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+.timer3d-stop-btn:active { transform: translateX(-50%) translateY(1px); }
