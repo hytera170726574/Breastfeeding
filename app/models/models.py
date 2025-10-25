@@ -14,7 +14,9 @@ class User(db.Model):
     babies = db.relationship('Baby', backref='parent', lazy=True)
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        # Force a stable hashing algorithm that does not rely on hashlib.scrypt
+        # to avoid environments where hashlib.scrypt is not available (e.g. LibreSSL builds).
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -165,6 +167,9 @@ class DirectBreastfeeding(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     baby_id = db.Column(db.Integer, db.ForeignKey('baby.id'), nullable=False)
+
+    # Relationship to Baby so that rec.baby is available (used by routes)
+    baby = db.relationship('Baby', backref=db.backref('direct_breastfeedings', lazy=True))
 
     @property
     def duration_minutes(self):

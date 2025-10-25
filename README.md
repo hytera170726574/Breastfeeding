@@ -66,9 +66,8 @@
 - `POST /api/baby/<baby_id>/set-default` - 设置默认婴儿
 - `GET /api/baby/default` - 获取默认婴儿
 
-### 喂养记录接口
+-### 喂养记录接口
 - `POST /api/feeding/` - 创建喂养记录
-- `POST /api/feeding/bottle` - 创建奶粉喂养记录
 - `POST /api/feeding/breast/start` - 开始母乳喂养
 - `PUT /api/feeding/breast/<feeding_id>/end` - 结束母乳喂养
 - `GET /api/feeding/<baby_id>` - 获取婴儿喂养记录

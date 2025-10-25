@@ -69,9 +69,9 @@
     <!-- 主界面 -->
     <div id="main-interface" class="w-full max-w-4xl floating-card p-8 relative fade-in z-10">
 
-        <div class="flex flex-col md:flex-row gap-6">
+    <div class="flex flex-col md:flex-row gap-6 items-stretch">
             <!-- 左侧欢迎区域：统一风格 -->
-            <div class="md:w-2/5 bg-gradient-to-br from-blue-500 to-purple-600 text-white p-8 rounded-lg">
+            <div class="md:w-2/5 bg-gradient-to-br from-blue-500 to-purple-600 text-white p-8 rounded-lg flex flex-col justify-between h-full">
                 <h1 class="text-3xl font-bold">母乳喂养记录</h1>
                 <p class="mt-3 text-blue-100">记录宝宝成长的每一个珍贵时刻</p>
                 <div class="mt-6 space-y-3">
@@ -133,7 +133,7 @@
                 <div class="w-full">
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
-                    <button aria-label="亲喂" class="main-button bg-green-500 hover:bg-green-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
+                    <button id="direct-button" aria-label="亲喂" class="main-button bg-green-500 hover:bg-green-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                         </svg>
@@ -151,7 +151,7 @@
                 </div>
 
                 <div>
-                    <button aria-label="瓶喂" class="main-button bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
+                    <button id="bottle-button" aria-label="瓶喂" class="main-button bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                         </svg>
@@ -160,7 +160,7 @@
                 </div>
 
                 <div>
-                    <button aria-label="记录" class="main-button bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
+                    <button id="record-button" aria-label="记录" class="main-button bg-purple-500 hover:bg-purple-600 text-white font-semibold rounded-2xl text-lg flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
@@ -172,23 +172,38 @@
                 </div> <!-- .w-full (buttons) -->
 
                 <!-- 底部统计信息 (仍在右侧列) -->
-                <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-white rounded-xl p-4 shadow text-center">
-                        <p class="text-gray-600">今日喂养次数</p>
-                        <p class="text-2xl font-bold text-green-500">3</p>
+                        <p class="text-gray-600">今日亲喂次数</p>
+                        <p id="today-feed-count" class="text-2xl font-bold text-green-500">3</p>
                     </div>
                     <div class="bg-white rounded-xl p-4 shadow text-center">
                         <p class="text-gray-600">今日睡眠时长</p>
-                        <p class="text-2xl font-bold text-yellow-500">5.2h</p>
+                        <p id="today-sleep-duration" class="text-2xl font-bold text-yellow-500">5.2h</p>
                     </div>
                     <div class="bg-white rounded-xl p-4 shadow text-center">
-                        <p class="text-gray-600">上次记录时间</p>
-                        <p class="text-xl font-bold text-blue-500">2小时前</p>
+                        <p class="text-gray-600">剩余母乳 (ml)</p>
+                        <p id="remaining-milk-ml" class="text-2xl font-bold text-pink-500">0</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-4 shadow text-center">
+                        <p class="text-gray-600">今日瓶喂 (ml)</p>
+                        <p id="today-bottle-ml" class="text-xl font-bold text-blue-500">0</p>
                     </div>
                 </div>
+                <!-- 周统计图表已移至下方以占据整个卡片宽度 -->
             </div> <!-- .md:w-3/5 (right column) -->
         </div> <!-- .flex (main split) -->
+
+        <!-- 将周统计图表移出右侧列，使其占据整个浮动卡片宽度 -->
+        <div class="mt-6 bg-white rounded-xl p-4 shadow w-full">
+            <p class="text-gray-600">近7天统计（不含今天）</p>
+            <canvas id="weekly-chart" style="width:100%;height:260px;display:block;"></canvas>
+        </div>
     </div> <!-- #main-interface -->
+
+    <!-- 全局页面内通知（支持多条、队列、自动消失与手动关闭） -->
+    <div id="global-notification" class="fixed top-6 right-6 z-50" style="pointer-events: none;"></div>
+    <script src="/static/js/notifications.js"></script>
 
     <!-- 3D Timer Modal -->
     <div id="timer3d-modal" class="hidden" aria-hidden="true">
@@ -249,12 +264,101 @@
         </div>
     </div>
 
+    <!-- 瓶喂记录模态 -->
+    <div id="bottle-feed-modal" class="hidden">
+        <div id="bottle-feed-backdrop" class="modal-backdrop"></div>
+        <div class="fixed inset-0 z-40 flex items-center justify-center p-4">
+            <div role="dialog" aria-modal="true" aria-labelledby="bottle-feed-title" class="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6">
+                <div class="text-center mb-4">
+                    <h2 id="bottle-feed-title" class="text-2xl font-bold text-gray-800">记录瓶喂</h2>
+                    <p class="text-gray-600 mt-2">选择母乳或配方，并填写毫升与备注</p>
+                </div>
+
+                <form id="bottle-feed-form" class="space-y-4">
+                    <div>
+                        <fieldset>
+                            <legend class="text-sm font-medium text-gray-700 mb-2">类型</legend>
+                            <label class="inline-flex items-center mr-4">
+                                <input type="radio" name="bottle-type" value="breast" checked class="form-radio h-4 w-4 text-blue-600">
+                                <span class="ml-2">母乳</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="bottle-type" value="formula" class="form-radio h-4 w-4 text-blue-600">
+                                <span class="ml-2">配方奶</span>
+                            </label>
+                            <label class="inline-flex items-center ml-4">
+                                <input type="radio" name="bottle-type" value="pump" class="form-radio h-4 w-4 text-blue-600">
+                                <span class="ml-2">泵奶（加入库存）</span>
+                            </label>
+                        </fieldset>
+                    </div>
+
+                    <div>
+                        <label for="bottle-ml" class="block text-sm font-medium text-gray-700 mb-1">毫升数 (ml)</label>
+                        <input type="number" id="bottle-ml" min="0" step="0.1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="输入毫升数" required />
+                    </div>
+
+                    <div>
+                        <label for="bottle-notes" class="block text-sm font-medium text-gray-700 mb-1">备注 (可选)</label>
+                        <input type="text" id="bottle-notes" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="例如：添加了维生素" />
+                    </div>
+
+                    <div class="flex space-x-4 pt-4">
+                        <button type="button" id="cancel-bottle-feed" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-200">取消</button>
+                        <button type="submit" id="save-bottle-feed-btn" class="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">保存</button>
+                    </div>
+                    <div id="bottle-feed-message" role="status" aria-live="polite" class="text-sm text-center mt-2 hidden"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 大小便记录模态 -->
+    <div id="diaper-modal" class="hidden">
+        <div id="diaper-backdrop" class="modal-backdrop"></div>
+        <div class="fixed inset-0 z-40 flex items-center justify-center p-4">
+            <div role="dialog" aria-modal="true" aria-labelledby="diaper-title" class="w-full max-w-lg bg-white rounded-2xl shadow-xl p-6">
+                <div class="text-center mb-4">
+                    <h2 id="diaper-title" class="text-2xl font-bold text-gray-800">记录大小便</h2>
+                    <p class="text-gray-600 mt-2">请选择类型并填写备注（可选）</p>
+                </div>
+
+                <form id="diaper-form" class="space-y-4">
+                    <div>
+                        <fieldset>
+                            <legend class="text-sm font-medium text-gray-700 mb-2">类型</legend>
+                            <label class="inline-flex items-center mr-4">
+                                <input type="radio" name="diaper-type" value="wet" checked class="form-radio h-4 w-4 text-green-600">
+                                <span class="ml-2">小号</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="diaper-type" value="dirty" class="form-radio h-4 w-4 text-red-600">
+                                <span class="ml-2">大号</span>
+                            </label>
+                        </fieldset>
+                    </div>
+
+                    <div>
+                        <label for="diaper-notes" class="block text-sm font-medium text-gray-700 mb-1">备注 (可选)</label>
+                        <input type="text" id="diaper-notes" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="例如：有血丝或颜色异常" />
+                    </div>
+
+                    <div class="flex space-x-4 pt-4">
+                        <button type="button" id="cancel-diaper" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-200">取消</button>
+                        <button type="submit" id="save-diaper-btn" class="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition duration-200">保存</button>
+                    </div>
+                    <div id="diaper-feed-message" role="status" aria-live="polite" class="text-sm text-center mt-2 hidden"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     
 
     <script>
-        // 模拟从后端获取用户婴儿信息
-        // 配置后端API地址
-        const API_BASE_URL = 'http://127.0.0.1:5000/api';
+    // 模拟从后端获取用户婴儿信息
+    // 配置后端API地址：使用 window.location.origin 保证从局域网设备访问时指向当前主机
+    const API_BASE_URL = window.location.origin + '/api';
         async function getUserBabyInfo() {
             console.log("开始获取用户婴儿信息...");
 
@@ -415,10 +519,16 @@
             if (modal) modal.classList.add('hidden');
         }
 
+        // Note: showNotification is provided by /static/js/notifications.js
+
         // 当前选择的婴儿 ID（用于记录请求）
     let currentBabyId = localStorage.getItem('currentBabyId') ? parseInt(localStorage.getItem('currentBabyId')) : null;
-        // 当前正在进行的睡眠记录 ID
-        let currentSleepId = null;
+    // 当前正在进行的睡眠记录 ID
+    let currentSleepId = null;
+    // 当前正在进行的亲喂记录 ID
+    let currentDirectId = null;
+    // 当前计时器模式： 'sleep' | 'direct' | null
+    let currentTimerMode = null;
     // 已移除计时器 interval 相关逻辑
 
         // 更新婴儿信息
@@ -443,6 +553,10 @@
             } else {
                 document.getElementById('baby-age').textContent = '-';
             }
+            // 更新统计信息
+            try { fetchAndUpdateStats(currentBabyId); } catch (e) { console.error('fetch stats error', e); }
+            // 尝试恢复任何正在进行中的计时（亲喂 / 睡眠）
+            try { fetchAndResumeActiveTimers(currentBabyId); } catch (e) { console.error('resume timers error', e); }
         }
 
         // 创建婴儿表单提交
@@ -473,23 +587,23 @@
 
             // 验证数据是否完整
             if (!name) {
-                alert('请填写宝宝姓名');
+                showNotification('请填写宝宝姓名', 'error');
                 return;
             }
 
             if (!gender) {
-                alert('请选择宝宝性别');
+                showNotification('请选择宝宝性别', 'error');
                 return;
             }
 
             if (!birth_date) {
-                alert('请选择宝宝出生日期');
+                showNotification('请选择宝宝出生日期', 'error');
                 return;
             }
 
             const token = localStorage.getItem('authToken');
             if (!token) {
-                alert('未找到认证信息，请重新登录');
+                showNotification('未找到认证信息，请重新登录', 'error');
                 return;
             }
             var user_id = 0;//服务器后端会更新ID为当前登录用户的uerid
@@ -529,9 +643,9 @@
                     const data = await response.json();
                     console.log('创建婴儿成功:', data);
 
-                    // 更新婴儿信息并显示成功消息
+                    // 更新婴儿信息并显示成功通知
                     updateBabyInfo(data);
-                    if (msgEl) { msgEl.textContent = '宝宝信息创建成功！'; msgEl.classList.remove('hidden'); msgEl.classList.remove('text-red-500'); msgEl.classList.add('text-green-500'); }
+                    showNotification('宝宝信息创建成功！', 'success', 2000);
 
                     // 关闭模态并重置按钮（稍作延迟以便用户看到消息）
                     setTimeout(() => {
@@ -542,14 +656,14 @@
                     }, 900);
                 } else {
                     console.error('创建婴儿失败，状态码:', response.status);
-                    if (msgEl) { msgEl.textContent = '创建失败，请稍后重试'; msgEl.classList.remove('hidden'); msgEl.classList.remove('text-green-500'); msgEl.classList.add('text-red-500'); }
+                    showNotification('创建失败，请稍后重试', 'error', 3500);
                     if (saveBtn) saveBtn.disabled = false;
                     if (saveLoader) saveLoader.classList.add('hidden');
                     if (saveText) saveText.textContent = '保存';
                 }
             } catch (error) {
                 console.error('创建婴儿时发生错误:', error);
-                if (msgEl) { msgEl.textContent = '网络错误，请稍后重试'; msgEl.classList.remove('hidden'); msgEl.classList.remove('text-green-500'); msgEl.classList.add('text-red-500'); }
+                showNotification('网络错误，请稍后重试', 'error', 3500);
                 if (saveBtn) saveBtn.disabled = false;
                 if (saveLoader) saveLoader.classList.add('hidden');
                 if (saveText) saveText.textContent = '保存';
@@ -559,6 +673,154 @@
         // 取消创建婴儿（关闭模态）
         document.getElementById('cancel-create-baby').addEventListener('click', function() {
             hideCreateBabyModal();
+        });
+
+        // 瓶喂模态打开/关闭
+        document.getElementById('bottle-button').addEventListener('click', function() {
+            document.getElementById('bottle-feed-modal').classList.remove('hidden');
+            const mlInput = document.getElementById('bottle-ml');
+            if (mlInput) setTimeout(() => mlInput.focus(), 50);
+        });
+        document.getElementById('cancel-bottle-feed').addEventListener('click', function() {
+            document.getElementById('bottle-feed-modal').classList.add('hidden');
+        });
+
+        // 记录（大小便）模态打开/关闭
+        const recordBtn = document.getElementById('record-button');
+        if (recordBtn) {
+            recordBtn.addEventListener('click', function() {
+                document.getElementById('diaper-modal').classList.remove('hidden');
+                const notesInput = document.getElementById('diaper-notes');
+                if (notesInput) setTimeout(() => notesInput.focus(), 50);
+            });
+        }
+        document.getElementById('cancel-diaper').addEventListener('click', function() {
+            document.getElementById('diaper-modal').classList.add('hidden');
+        });
+
+        // 关闭瓶喂模态的 backdrop 点击
+        document.addEventListener('click', function(e) {
+            const backdrop = document.getElementById('bottle-feed-backdrop');
+            if (backdrop && e.target === backdrop) {
+                document.getElementById('bottle-feed-modal').classList.add('hidden');
+            }
+        });
+
+        // 提交瓶喂表单
+    document.getElementById('bottle-feed-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const type = document.querySelector('input[name="bottle-type"]:checked').value;
+        const ml = parseFloat(document.getElementById('bottle-ml').value || '0');
+            const notes = document.getElementById('bottle-notes').value || null;
+
+            if (!currentBabyId) { showNotification('未选择婴儿，请先设置宝宝', 'error'); return; }
+        if (!ml || ml <= 0) { showNotification('请输入有效的毫升数', 'error'); return; }
+
+            const token = localStorage.getItem('authToken');
+            if (!token) { showNotification('未登录，请先登录', 'error'); return; }
+
+            const payload = { baby_id: currentBabyId, volume_ml: ml, timestamp: new Date().toISOString(), notes };
+
+            try {
+                let res;
+                if (type === 'breast') {
+                    // 使用瓶喂母乳接口
+                    res = await fetch('/api/feeding/breast-bottle', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(payload)
+                    });
+                } else if (type === 'pump') {
+                    // 泵奶：将泵出的奶加入库存（调用 /breastToPump）
+                    const pumpPayload = {
+                        baby_id: currentBabyId,
+                        volume_ml: ml,
+                        start_time: payload.timestamp,
+                        end_time: payload.timestamp,
+                        notes: notes
+                    };
+                    res = await fetch('/api/feeding/breastToPump', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(pumpPayload)
+                    });
+                } else {
+                    // 配方奶：调用专用接口 /api/feeding/formula，后端会创建 FormulaFeeding 记录
+                    const formulaPayload = { baby_id: currentBabyId, timestamp: payload.timestamp, volume_ml: ml };
+                    // include notes if provided
+                    if (notes) formulaPayload.notes = notes;
+                    res = await fetch('/api/feeding/formula', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify(formulaPayload)
+                    });
+                }
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showNotification(err.message || '记录失败，请稍后重试', 'error');
+                    return;
+                }
+
+                const data = await res.json();
+                // 如果是泵奶或瓶喂母乳，后端可能返回剩余母乳量，尽量提示给用户
+                if (data && data.data && data.data.remaining_ml !== undefined) {
+                    showNotification(`操作成功，当前剩余母乳 ${data.data.remaining_ml} ml`, 'success');
+                } else if (data && data.remaining_ml !== undefined) {
+                    showNotification(`操作成功，当前剩余母乳 ${data.remaining_ml} ml`, 'success');
+                } else {
+                    showNotification('瓶喂记录已保存', 'success');
+                }
+                // 关闭模态并重置表单
+                setTimeout(() => {
+                    document.getElementById('bottle-feed-modal').classList.add('hidden');
+                    document.getElementById('bottle-feed-form').reset();
+                    // 刷新统计信息（剩余母乳量 + 今日喂养次数）
+                    try { fetchAndUpdateStats(currentBabyId); } catch(e){}
+                }, 600);
+            } catch (err) {
+                console.error('瓶喂提交错误', err);
+                showNotification('网络错误，记录失败', 'error');
+            }
+        });
+
+        // 提交大小便表单
+        document.getElementById('diaper-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const type = document.querySelector('input[name="diaper-type"]:checked').value;
+            const notes = document.getElementById('diaper-notes').value || null;
+
+            if (!currentBabyId) { showNotification('未选择婴儿，请先设置宝宝', 'error'); return; }
+
+            const token = localStorage.getItem('authToken');
+            if (!token) { showNotification('未登录，请先登录', 'error'); return; }
+
+            const payload = { baby_id: currentBabyId, diaper_type: type, timestamp: new Date().toISOString(), notes };
+
+            try {
+                const res = await fetch('/api/diaper/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showNotification(err.message || '记录失败，请稍后重试', 'error');
+                    return;
+                }
+
+                const data = await res.json();
+                showNotification('大小便记录已保存', 'success');
+                setTimeout(() => {
+                    document.getElementById('diaper-modal').classList.add('hidden');
+                    document.getElementById('diaper-form').reset();
+                    try { fetchAndUpdateStats(currentBabyId); } catch(e){}
+                }, 600);
+            } catch (err) {
+                console.error('大小便提交错误', err);
+                showNotification('网络错误，记录失败', 'error');
+            }
         });
 
         // 编辑婴儿信息：打开模态并尝试预填当前信息
@@ -580,13 +842,18 @@
         document.querySelectorAll('.main-button').forEach(button => {
             button.addEventListener('click', function() {
                 const buttonText = this.textContent.trim();
-                // 睡眠按钮有特殊行为
+                // 睡眠和亲喂按钮有特殊行为
                 if (button.id === 'sleep-button') {
                     // 调用开始睡眠流程
                     startSleep();
                     return;
                 }
-                alert(`您点击了: ${buttonText}`);
+                if (button.id === 'direct-button') {
+                    // 调用开始亲喂流程
+                    startDirectBreast();
+                    return;
+                }
+                showNotification(`您点击了: ${buttonText}`, 'info');
                 // 这里可以根据按钮类型跳转到相应的记录页面
             });
         });
@@ -596,11 +863,11 @@
         // 开始睡眠：调用后端创建记录并打开计时器模态
         async function startSleep() {
             if (!currentBabyId) {
-                alert('未选择婴儿，请先设置宝宝');
+                showNotification('未选择婴儿，请先设置宝宝', 'error');
                 return;
             }
             const token = localStorage.getItem('authToken');
-            if (!token) { alert('未登录，请先登录'); return; }
+            if (!token) { showNotification('未登录，请先登录', 'error'); return; }
 
             // client-side time as a fallback; server will return authoritative start_time
             const startTime = new Date().toISOString();
@@ -612,18 +879,19 @@
                 });
                 if (!res.ok) {
                     const err = await res.json();
-                    alert(err.message || '开始睡眠失败');
+                    showNotification(err.message || '开始睡眠失败', 'error');
                     return;
                 }
                 const data = await res.json();
                 // 后端返回了 sleep 对象，优先使用 data.data 或 data
                 currentSleepId = (data && data.data && data.data.id) || data.id || null;
-                // 打开 3D 计时器
+                // 打开 3D 计时器（标记当前为睡眠模式，便于停止按钮路由）
                 const serverStartIso = (data && data.data && data.data.start_time) || data.start_time || startTime;
+                currentTimerMode = 'sleep';
                 openTimer3D(serverStartIso);
             } catch (e) {
                 console.error('startSleep error', e);
-                alert('开始睡眠请求失败');
+                showNotification('开始睡眠请求失败', 'error');
             }
         }
 
@@ -634,16 +902,97 @@
             if (backdrop && e.target === backdrop){ closeTimer3D(); }
         });
         const stopBtn3d = document.getElementById('timer3d-stop');
-        if (stopBtn3d){ stopBtn3d.addEventListener('click', async function(){ await stopSleep(); closeTimer3D(); }); }
+        if (stopBtn3d){
+            stopBtn3d.addEventListener('click', async function(){
+                try {
+                    if (currentTimerMode === 'sleep') {
+                        await stopSleep();
+                    } else if (currentTimerMode === 'direct') {
+                        await stopDirectBreast();
+                    }
+                } finally {
+                    // always close modal and reset mode
+                    closeTimer3D();
+                    currentTimerMode = null;
+                }
+            });
+        }
+
+        // 开始亲喂（与睡眠类似）：调用后端创建记录并打开计时器模态
+        async function startDirectBreast() {
+            if (!currentBabyId) {
+                showNotification('未选择婴儿，请先设置宝宝', 'error');
+                return;
+            }
+            const token = localStorage.getItem('authToken');
+            if (!token) { showNotification('未登录，请先登录', 'error'); return; }
+
+            const startTime = new Date().toISOString();
+            try {
+                const res = await fetch('/api/feeding/direct/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ start_time: startTime, baby_id: currentBabyId })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    showNotification(err.message || '开始亲喂失败', 'error');
+                    return;
+                }
+                const data = await res.json();
+                // 后端返回了记录对象，可能在 data.data 或 data
+                currentDirectId = (data && data.data && data.data.id) || data.id || null;
+                const serverStartIso = (data && data.data && data.data.start_time) || data.start_time || startTime;
+                // 持久化到 localStorage，便于在手机浏览器被关闭后恢复
+                try { localStorage.setItem(`active_direct_${currentBabyId}`, JSON.stringify({ id: currentDirectId, start_time: serverStartIso })); } catch (e) {}
+                currentTimerMode = 'direct';
+                openTimer3D(serverStartIso);
+            } catch (e) {
+                console.error('startDirectBreast error', e);
+                showNotification('开始亲喂请求失败', 'error');
+            }
+        }
+
+        // 结束亲喂
+        async function stopDirectBreast() {
+            if (!currentDirectId) {
+                showNotification('未找到当前亲喂记录', 'error');
+                return;
+            }
+            const token = localStorage.getItem('authToken');
+            if (!token) { showNotification('未登录，请先登录', 'error'); return; }
+            const endTime = new Date().toISOString();
+            try {
+                const res = await fetch(`/api/feeding/direct/${currentDirectId}/end`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ end_time: endTime })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    showNotification(err.message || '结束亲喂失败', 'error');
+                    return;
+                }
+                const data = await res.json();
+                currentDirectId = null;
+                try { localStorage.removeItem(`active_direct_${currentBabyId}`); } catch (e) {}
+                showNotification('亲喂已结束并保存', 'success');
+                // 刷新统计信息（喂养次数、剩余母乳、睡眠等）
+                try { fetchAndUpdateStats(currentBabyId); } catch(e) { console.error('refresh stats after direct end failed', e); }
+            } catch (e) {
+                console.error('stopDirectBreast error', e);
+                showNotification('结束亲喂请求失败', 'error');
+            }
+        }
 
         // 结束睡眠
         async function stopSleep() {
             if (!currentSleepId) {
-                alert('未找到当前睡眠记录');
+                showNotification('未找到当前睡眠记录', 'error');
                 return;
             }
             const token = localStorage.getItem('authToken');
-            if (!token) { alert('未登录，请先登录'); return; }
+            if (!token) { showNotification('未登录，请先登录', 'error'); return; }
             const endTime = new Date().toISOString();
             try {
                 const res = await fetch(`/api/sleep/${currentSleepId}/end`, {
@@ -653,17 +1002,19 @@
                 });
                 if (!res.ok) {
                     const err = await res.json();
-                    alert(err.message || '结束睡眠失败');
+                    showNotification(err.message || '结束睡眠失败', 'error');
                     return;
                 }
                 const data = await res.json();
                 // 停止计时（关闭操作由调用处负责）
                 currentSleepId = null;
-                // 可选：更新页面统计（这里暂时简单提示）
-                alert('睡眠已结束并保存');
+                try { localStorage.removeItem(`active_sleep_${currentBabyId}`); } catch (e) {}
+                // 更新页面统计（刷新睡眠时长与喂养次数）
+                try { fetchAndUpdateStats(currentBabyId); } catch(e) { console.error('refresh stats after sleep end failed', e); }
+                showNotification('睡眠已结束并保存', 'success');
             } catch (e) {
                 console.error('stopSleep error', e);
-                alert('结束睡眠请求失败');
+                showNotification('结束睡眠请求失败', 'error');
             }
         }
 
@@ -706,6 +1057,247 @@
             }
         }
 
+        // 刷新统计：剩余母乳量 & 今日喂养次数
+        async function fetchAndUpdateStats(babyId) {
+            if (!babyId) return;
+            const token = localStorage.getItem('authToken');
+            try {
+                // 获取剩余母乳量
+                const remRes = await fetch(`/api/feeding/breast/remaining/${babyId}`, {
+                    method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                });
+                if (remRes.ok) {
+                    const remData = await remRes.json();
+                    const remaining = remData.data && remData.data.remaining_ml != null ? remData.data.remaining_ml : 0;
+                    // update remaining milk display
+                    const remainingEl = document.getElementById('remaining-milk-ml');
+                    if (remainingEl) {
+                        remainingEl.textContent = remaining;
+                    }
+                    // remaining milk already updated above
+                }
+
+                // 计算今日喂养次数（使用新接口获取汇总）
+                const startOfDay = new Date();
+                startOfDay.setHours(0,0,0,0);
+                const startIso = startOfDay.toISOString();
+                const endIso = new Date().toISOString();
+                const countRes = await fetch(`/api/feeding/count?baby_id=${babyId}&start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {
+                    method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                });
+                if (countRes.ok) {
+                    const countData = await countRes.json();
+                    const total = (countData.data && typeof countData.data.total === 'number') ? countData.data.total : 0;
+                    document.getElementById('today-feed-count').textContent = total;
+                }
+
+                // 获取今日瓶喂总毫升数（母乳瓶喂 + 配方奶）
+                const bottleRes = await fetch(`/api/feeding/bottle-ml?baby_id=${babyId}&start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {
+                    method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                });
+                if (bottleRes.ok) {
+                    const bottleData = await bottleRes.json();
+                    const ml = (bottleData.data && typeof bottleData.data.total_ml === 'number') ? bottleData.data.total_ml : 0;
+                    const bottleEl = document.getElementById('today-bottle-ml');
+                    if (bottleEl) bottleEl.textContent = ml;
+                }
+
+                // 计算今日睡眠总时长（从睡眠接口获取记录并累加 duration_minutes 字段或计算差值）
+                const sleepRes = await fetch(`/api/sleep/${babyId}?start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {
+                    method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                });
+                if (sleepRes.ok) {
+                    const sleepData = await sleepRes.json();
+                    const sleeps = (sleepData.data && Array.isArray(sleepData.data)) ? sleepData.data : [];
+                    let totalMinutes = 0;
+                    for (const s of sleeps) {
+                        // 优先使用后端计算的 duration_minutes（如果存在），否则用 start/end 计算
+                        if (s.duration_minutes != null) {
+                            totalMinutes += Number(s.duration_minutes) || 0;
+                        } else if (s.start_time && s.end_time) {
+                            const st = new Date(s.start_time);
+                            const en = new Date(s.end_time);
+                            const mins = Math.max(0, (en - st) / 60000);
+                            totalMinutes += mins;
+                        }
+                    }
+                    // 显示为小时（保留一位小数）
+                    const hours = (totalMinutes / 60).toFixed(1);
+                    document.getElementById('today-sleep-duration').textContent = `${hours}h`;
+                }
+            } catch (e) {
+                console.error('fetchAndUpdateStats error', e);
+            }
+
+                // 同步加载周统计图（默认：过去7天，不含今天）
+                try { await fetchAndRenderWeeklyChart(babyId); } catch(e){ console.error('weekly chart load failed', e); }
+        }
+
+            // 获取并渲染周统计（不包含今天）
+            let weeklyChart = null;
+
+            // 检查并恢复活动计时器（如果存在）
+            async function fetchAndResumeActiveTimers(babyId){
+                if (!babyId) return;
+                const token = localStorage.getItem('authToken');
+                if (!token) return;
+
+                try {
+                    // First, check localStorage fallback in case browser was closed before server-side record could be fetched
+                    try {
+                        const stored = localStorage.getItem(`active_direct_${babyId}`);
+                        if (stored) {
+                            const obj = JSON.parse(stored);
+                            if (obj && obj.start_time) {
+                                currentDirectId = obj.id || null;
+                                currentTimerMode = 'direct';
+                                openTimer3D(obj.start_time);
+                                return;
+                            }
+                        }
+                    } catch (e) { /* ignore parse errors */ }
+
+                    // Check active direct breastfeeding
+                    const resDirect = await fetch(`${API_BASE_URL}/feeding/direct/active?baby_id=${babyId}`, {
+                        method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resDirect && resDirect.ok){
+                        const j = await resDirect.json();
+                        if (j.data){
+                            const rec = j.data;
+                            currentDirectId = rec.id;
+                            currentTimerMode = 'direct';
+                            const serverStartIso = rec.start_time || rec.created_at || new Date().toISOString();
+                            openTimer3D(serverStartIso);
+                            return; // prefer direct if active
+                        }
+                    }
+
+                    // Check active sleep
+                    const resSleep = await fetch(`${API_BASE_URL}/sleep/active?baby_id=${babyId}`, {
+                        method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resSleep && resSleep.ok){
+                        const j2 = await resSleep.json();
+                        if (j2.data){
+                            const rec = j2.data;
+                            currentSleepId = rec.id;
+                            currentTimerMode = 'sleep';
+                            const serverStartIso = rec.start_time || rec.created_at || new Date().toISOString();
+                            try { localStorage.setItem(`active_sleep_${babyId}`, JSON.stringify({ id: currentSleepId, start_time: serverStartIso })); } catch (e) {}
+                            openTimer3D(serverStartIso);
+                        }
+                    }
+                    // If server didn't return an active sleep, check localStorage fallback
+                    try {
+                        const storedS = localStorage.getItem(`active_sleep_${babyId}`);
+                        if (storedS && !currentSleepId) {
+                            const objS = JSON.parse(storedS);
+                            if (objS && objS.start_time) {
+                                currentSleepId = objS.id || null;
+                                currentTimerMode = 'sleep';
+                                openTimer3D(objS.start_time);
+                            }
+                        }
+                    } catch (e) { /* ignore */ }
+                } catch (e) {
+                    console.error('fetchAndResumeActiveTimers error', e);
+                }
+            }
+            async function fetchAndRenderWeeklyChart(babyId){
+                if (!babyId) return;
+                const token = localStorage.getItem('authToken');
+
+                // compute start = 7 days ago (00:00), end = yesterday 23:59:59
+                const today = new Date();
+                const end = new Date(today);
+                end.setHours(0,0,0,0); // today 00:00
+                end.setMilliseconds(-1); // yesterday 23:59:59.999
+                const start = new Date(end);
+                start.setDate(start.getDate() - 6); // inclusive 7 days
+                start.setHours(0,0,0,0);
+
+                const payload = {
+                    baby_id: babyId,
+                    start_date: start.toISOString(),
+                    end_date: end.toISOString()
+                };
+
+                const res = await fetch('/api/stats/weekly/overview', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) return;
+                const j = await res.json();
+                const d = j.data || {};
+                const labels = ['1','2','3','4','5','6','7'];
+
+                const datasets = [
+                    {
+                        label: '亲喂次数',
+                        data: d.direct_counts || [],
+                        backgroundColor: 'rgba(34,197,94,0.9)',
+                        yAxisID: 'yLeft'
+                    },
+                    {
+                        label: '大便次数',
+                        data: d.dirty_counts || [],
+                        backgroundColor: 'rgba(239,68,68,0.9)',
+                        yAxisID: 'yLeft'
+                    },
+                    {
+                        label: '小便次数',
+                        data: d.wet_counts || [],
+                        backgroundColor: 'rgba(59,130,246,0.9)',
+                        yAxisID: 'yLeft'
+                    },
+                    {
+                        label: '睡眠分钟',
+                        data: d.sleep_minutes || [],
+                        backgroundColor: 'rgba(168,85,247,0.9)',
+                        yAxisID: 'yRight'
+                    },
+                    {
+                        label: '瓶喂(ml)',
+                        data: d.bottle_ml || [],
+                        backgroundColor: 'rgba(14,165,233,0.9)',
+                        yAxisID: 'yRight'
+                    }
+                ];
+
+                const ctx = document.getElementById('weekly-chart').getContext('2d');
+                if (weeklyChart) { weeklyChart.data.labels = labels; weeklyChart.data.datasets = datasets; weeklyChart.update(); return; }
+
+                weeklyChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            yLeft: {
+                                type: 'linear',
+                                position: 'left',
+                                title: { display: true, text: '次数' },
+                                beginAtZero: true
+                            },
+                            yRight: {
+                                type: 'linear',
+                                position: 'right',
+                                title: { display: true, text: '分钟 / ml' },
+                                beginAtZero: true,
+                                grid: { drawOnChartArea: false }
+                            }
+                        },
+                        plugins: {
+                            legend: { position: 'top' }
+                        }
+                    }
+                });
+            }
+
+        
+
         // 页面加载时获取用户信息
         //暂时，决定，在login时存储userid
         // document.addEventListener('DOMContentLoaded', async function() {
@@ -714,5 +1306,7 @@
 
     </script>
     <script src="/static/js/timer3d.js"></script>
+    <!-- Chart.js for weekly overview -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </body>
 </html>

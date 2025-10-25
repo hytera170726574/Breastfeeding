@@ -3,7 +3,7 @@ import logging
 from app import db
 from app.models.models import Sleep
 from app.schemas.schemas import SleepCreate, SleepUpdate, SleepResponse
-from app.utils.helpers import get_current_user, success_response, error_response
+from app.utils.helpers import get_current_user, success_response, error_response, parse_iso_datetime
 from flask_jwt_extended import jwt_required
 from datetime import datetime
 
@@ -97,33 +97,65 @@ def get_sleeps(baby_id):
         # 获取查询参数
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-
         # 构建查询
         query = Sleep.query.filter_by(baby_id=baby_id).order_by(Sleep.start_time.desc())
+        # 排除无效记录（必须同时包含开始和结束时间）
+        query = query.filter(Sleep.start_time.isnot(None), Sleep.end_time.isnot(None))
 
         # 按日期范围过滤
         if start_date:
             try:
-                start_datetime = datetime.fromisoformat(start_date)
+                start_datetime = parse_iso_datetime(start_date)
                 query = query.filter(Sleep.start_time >= start_datetime)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
 
         if end_date:
             try:
-                end_datetime = datetime.fromisoformat(end_date)
+                end_datetime = parse_iso_datetime(end_date)
                 query = query.filter(Sleep.start_time <= end_datetime)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
 
         # 执行查询
         sleeps = query.all()
-        sleeps_data = [SleepResponse.from_orm(sleep) for sleep in sleeps]
+        sleeps_data = [SleepResponse.from_orm(sleep).dict() for sleep in sleeps]
 
         return success_response('获取睡眠记录成功', sleeps_data, 200)
 
     except Exception as e:
         return error_response(f'获取睡眠记录失败: {str(e)}')
+
+
+@sleep_bp.route('/active', methods=['GET'])
+@jwt_required()
+def get_active_sleep():
+    """Return the active sleep record (end_time is NULL) for a baby, if any."""
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        baby_id = request.args.get('baby_id')
+        if not baby_id:
+            return error_response('缺少 baby_id 参数', 400)
+        try:
+            baby_id = int(baby_id)
+        except ValueError:
+            return error_response('baby_id 必须为整数', 400)
+
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        rec = Sleep.query.filter_by(baby_id=baby_id).filter(Sleep.end_time.is_(None)).order_by(Sleep.start_time.desc()).first()
+        if not rec:
+            return success_response('没有活动的睡眠记录', None, 200)
+
+        return success_response('获取活动睡眠记录成功', SleepResponse.from_orm(rec).dict(), 200)
+    except Exception as e:
+        return error_response(f'获取活动睡眠记录失败: {str(e)}')
 
 @sleep_bp.route('/default-baby', methods=['GET'])
 @jwt_required()
@@ -150,25 +182,27 @@ def get_sleeps_for_default_baby():
 
         # 构建查询
         query = Sleep.query.filter_by(baby_id=baby.id).order_by(Sleep.start_time.desc())
+        # 排除无效记录（必须同时包含开始和结束时间）
+        query = query.filter(Sleep.start_time.isnot(None), Sleep.end_time.isnot(None))
 
         # 按日期范围过滤
         if start_date:
             try:
-                start_datetime = datetime.fromisoformat(start_date)
+                start_datetime = parse_iso_datetime(start_date)
                 query = query.filter(Sleep.start_time >= start_datetime)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
 
         if end_date:
             try:
-                end_datetime = datetime.fromisoformat(end_date)
+                end_datetime = parse_iso_datetime(end_date)
                 query = query.filter(Sleep.start_time <= end_datetime)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
 
         # 执行查询
         sleeps = query.all()
-        sleeps_data = [SleepResponse.from_orm(sleep) for sleep in sleeps]
+        sleeps_data = [SleepResponse.from_orm(sleep).dict() for sleep in sleeps]
 
         return success_response('获取睡眠记录成功', sleeps_data, 200)
 

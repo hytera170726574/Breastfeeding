@@ -148,12 +148,19 @@
         </div>
     </div>
 
+    <!-- Global in-page notification (shared with dashboard) -->
+    <div id="global-notification" class="fixed top-6 right-6 z-50" style="pointer-events: none;"></div>
+
+    <script src="/static/js/notifications.js"></script>
+
     <script>
-        // 配置后端API地址
-        const API_BASE_URL = 'http://127.0.0.1:5000/api'; // 请根据您的实际Flask服务地址修改
+    // 配置后端API地址：使用当前页面 origin，这样从局域网设备访问时会指向正确的服务器
+    const API_BASE_URL = window.location.origin + '/api';
+    console.log('API_BASE_URL set to', API_BASE_URL);
         console.log("脚本开始执行");
+
         // 切换登录和注册表单
-            document.getElementById('login-tab').addEventListener('click', function() {
+        document.getElementById('login-tab').addEventListener('click', function() {
             document.getElementById('login-form').classList.remove('hidden');
             document.getElementById('register-form').classList.add('hidden');
             document.getElementById('login-tab').classList.add('border-blue-500', 'text-gray-800');
@@ -161,8 +168,8 @@
             document.getElementById('register-tab').classList.remove('border-blue-500', 'text-gray-800');
             document.getElementById('register-tab').classList.add('text-gray-500');
         });
-        
-            document.getElementById('register-tab').addEventListener('click', function() {
+
+        document.getElementById('register-tab').addEventListener('click', function() {
             document.getElementById('register-form').classList.remove('hidden');
             document.getElementById('login-form').classList.add('hidden');
             document.getElementById('register-tab').classList.add('border-blue-500', 'text-gray-800');
@@ -170,26 +177,26 @@
             document.getElementById('login-tab').classList.remove('border-blue-500', 'text-gray-800');
             document.getElementById('login-tab').classList.add('text-gray-500');
         });
-        
+
         // 登录表单提交处理
         document.getElementById('login-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             // 获取表单数据
             const username = document.getElementById('login-username').value;
             const password = document.getElementById('login-password').value;
-            
+
             // 显示加载状态
             const loginBtn = document.getElementById('login-btn');
             const loginText = document.getElementById('login-text');
             const loginLoader = document.getElementById('login-loader');
             const loginMessage = document.getElementById('login-message');
-            
+
             loginBtn.disabled = true;
             loginText.textContent = '登录中...';
             loginLoader.classList.remove('hidden');
             loginMessage.classList.add('hidden');
-            
+
         try {
                 // 发送登录请求到后端
                 console.log("发送登录请求");
@@ -203,41 +210,32 @@
                         password: password
                     })
                 });
-                
+
                 const data = await response.json();
                 console.log("获取完成response数据");
                 console.log(data.message+"----");
                 if (data.message=='登录成功') {
                     // 登录成功，显示成功消息并跳转
                     console.log('开始登录');
-                    loginMessage.textContent = '登录成功！正在跳转...';
-                    loginMessage.classList.remove('hidden');
-                    loginMessage.classList.remove('text-red-500');
-                    loginMessage.classList.add('text-green-500');
-                    
                     // 保存token到本地存储（如果后端返回了token）
                     if (data.access_token) {
                         console.log('保存token');
                         localStorage.setItem('authToken', data.access_token);
                     }
-                    if (data.user)
-                    {
+                    if (data.user) {
                         console.log('保存用户信息');
                         localStorage.setItem('userInfo', JSON.stringify(data.user));
                     }
-                    
-                    // 延迟一下让用户看到成功消息
+
+                    showNotification('登录成功！正在跳转...', 'success', 1500);
+                    // 延迟跳转，保持与之前行为一致
                     setTimeout(() => {
-                        // 跳转到首页
-                        window.location.href = `${API_BASE_URL}/auth/dashboard`; // 请根据您的实际首页路由修改
+                        window.location.href = `${API_BASE_URL}/auth/dashboard`;
                     }, 1500);
                 } else {
-                    // 登录失败，显示错误消息
-                    loginMessage.textContent = data.message || '登录失败，请检查您的用户名和密码';
-                    loginMessage.classList.remove('hidden');
-                    loginMessage.classList.remove('text-green-500');
-                    loginMessage.classList.add('text-red-500');
-                    
+                    // 登录失败，显示错误通知
+                    showNotification(data.message || '登录失败，请检查您的用户名和密码', 'error', 4000);
+
                     // 恢复按钮状态
                     loginBtn.disabled = false;
                     loginText.textContent = '登录';
@@ -245,28 +243,24 @@
                 }
         } catch (error) {
                 console.error('登录请求失败:', error);
-                loginMessage.textContent = '网络错误，请稍后重试';
-                loginMessage.classList.remove('hidden');
-                loginMessage.classList.remove('text-green-500');
-                loginMessage.classList.add('text-red-500');
-                
+                showNotification('网络错误，请稍后重试', 'error', 3500);
                 // 恢复按钮状态
                 loginBtn.disabled = false;
                 loginText.textContent = '登录';
                 loginLoader.classList.add('hidden');
             }
         });
-        
+
         // 注册表单提交处理
         document.getElementById('register-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             // 获取表单数据
             const name = document.getElementById('register-name').value;
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
             const confirmPassword = document.getElementById('register-confirm-password').value;
-            
+
             // 验证密码是否匹配
             if (password !== confirmPassword) {
                 const registerMessage = document.getElementById('register-message');
@@ -276,18 +270,18 @@
                 registerMessage.classList.add('text-red-500');
                 return;
             }
-            
+
             // 显示加载状态
             const registerBtn = document.getElementById('register-btn');
             const registerText = document.getElementById('register-text');
             const registerLoader = document.getElementById('register-loader');
             const registerMessage = document.getElementById('register-message');
-            
+
             registerBtn.disabled = true;
             registerText.textContent = '注册中...';
             registerLoader.classList.remove('hidden');
             registerMessage.classList.add('hidden');
-            
+
             try {
                 // 发送注册请求到后端
                 const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -301,28 +295,23 @@
                         password: password
                     })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok && data.success) {
                     // 注册成功
-                    registerMessage.textContent = '注册成功！请登录';
-                    registerMessage.classList.remove('hidden');
-                    registerMessage.classList.remove('text-red-500');
-                    registerMessage.classList.add('text-green-500');
-                    
+                    showNotification('注册成功！请登录', 'success', 2000);
                     // 延迟一下然后切换到登录表单
                     setTimeout(() => {
                         document.getElementById('login-tab').click();
-                        document.getElementById('login-email').value = email;
+                        // if there is a login email field, set it
+                        const loginEmail = document.getElementById('login-email');
+                        if (loginEmail) loginEmail.value = email;
                     }, 1500);
                 } else {
                     // 注册失败
-                    registerMessage.textContent = data.message || '注册失败，请稍后重试';
-                    registerMessage.classList.remove('hidden');
-                    registerMessage.classList.remove('text-green-500');
-                    registerMessage.classList.add('text-red-500');
-                    
+                    showNotification(data.message || '注册失败，请稍后重试', 'error', 4000);
+
                     // 恢复按钮状态
                     registerBtn.disabled = false;
                     registerText.textContent = '注册';
@@ -330,11 +319,7 @@
                 }
             } catch (error) {
                 console.error('注册请求失败:', error);
-                registerMessage.textContent = '网络错误，请稍后重试';
-                registerMessage.classList.remove('hidden');
-                registerMessage.classList.remove('text-green-500');
-                registerMessage.classList.add('text-red-500');
-                
+                showNotification('网络错误，请稍后重试', 'error', 3500);
                 // 恢复按钮状态
                 registerBtn.disabled = false;
                 registerText.textContent = '注册';

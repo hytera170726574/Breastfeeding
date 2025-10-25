@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models.models import Diaper
 from app.schemas.schemas import DiaperCreate, DiaperUpdate, DiaperResponse
-from app.utils.helpers import get_current_user, success_response, error_response
+from app.utils.helpers import get_current_user, success_response, error_response, parse_iso_datetime
 from flask_jwt_extended import jwt_required
 from datetime import datetime
 
@@ -75,14 +75,14 @@ def get_diapers(baby_id):
         # 按日期范围过滤
         if start_date:
             try:
-                start_datetime = datetime.fromisoformat(start_date)
+                start_datetime = parse_iso_datetime(start_date)
                 query = query.filter(Diaper.timestamp >= start_datetime)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
 
         if end_date:
             try:
-                end_datetime = datetime.fromisoformat(end_date)
+                end_datetime = parse_iso_datetime(end_date)
                 query = query.filter(Diaper.timestamp <= end_datetime)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
@@ -130,14 +130,14 @@ def get_diapers_for_default_baby():
         # 按日期范围过滤
         if start_date:
             try:
-                start_datetime = datetime.fromisoformat(start_date)
+                start_datetime = parse_iso_datetime(start_date)
                 query = query.filter(Diaper.timestamp >= start_datetime)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
 
         if end_date:
             try:
-                end_datetime = datetime.fromisoformat(end_date)
+                end_datetime = parse_iso_datetime(end_date)
                 query = query.filter(Diaper.timestamp <= end_datetime)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)

@@ -2,9 +2,8 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models.models import Measurement
 from app.schemas.schemas import MeasurementCreate, MeasurementUpdate, MeasurementResponse
-from app.utils.helpers import get_current_user, success_response, error_response
+from app.utils.helpers import get_current_user, success_response, error_response, parse_iso_datetime
 from flask_jwt_extended import jwt_required
-from datetime import datetime
 
 measurement_bp = Blueprint('measurement_bp', __name__)
 
@@ -78,14 +77,14 @@ def get_measurements(baby_id):
         # 按日期范围过滤
         if start_date:
             try:
-                start_date_obj = datetime.fromisoformat(start_date).date()
+                start_date_obj = parse_iso_datetime(start_date).date()
                 query = query.filter(Measurement.measurement_date >= start_date_obj)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DD)', 400)
 
         if end_date:
             try:
-                end_date_obj = datetime.fromisoformat(end_date).date()
+                end_date_obj = parse_iso_datetime(end_date).date()
                 query = query.filter(Measurement.measurement_date <= end_date_obj)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DD)', 400)
@@ -128,14 +127,14 @@ def get_measurements_for_default_baby():
         # 按日期范围过滤
         if start_date:
             try:
-                start_date_obj = datetime.fromisoformat(start_date).date()
+                start_date_obj = parse_iso_datetime(start_date).date()
                 query = query.filter(Measurement.measurement_date >= start_date_obj)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DD)', 400)
 
         if end_date:
             try:
-                end_date_obj = datetime.fromisoformat(end_date).date()
+                end_date_obj = parse_iso_datetime(end_date).date()
                 query = query.filter(Measurement.measurement_date <= end_date_obj)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DD)', 400)

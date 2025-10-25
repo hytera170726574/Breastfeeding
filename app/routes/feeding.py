@@ -10,7 +10,6 @@ from app.models.models import (
 )
 from app.schemas.schemas import (
     FeedingCreate,
-    BottleFeedingCreate,
     BreastFeedingStart,
     BreastFeedingEnd,
     FeedingUpdate,
@@ -25,9 +24,10 @@ from app.schemas.schemas import (
     FormulaFeedingResponse,
     BottleBreastResponse,
 )
-from app.utils.helpers import get_current_user, success_response, error_response
+from app.utils.helpers import get_current_user, success_response, error_response, parse_iso_datetime
 from flask_jwt_extended import jwt_required
 from datetime import datetime
+from sqlalchemy import text
 
 feeding_bp = Blueprint('feeding_bp', __name__)
 
@@ -69,40 +69,10 @@ def create_feeding():
         db.session.rollback()
         return error_response(f'创建喂养记录失败: {str(e)}')
 
-@feeding_bp.route('/bottle', methods=['POST'])
-@jwt_required()
-def create_bottle_feeding():
-    try:
-        # 获取当前用户
-        current_user = get_current_user()
-        if not current_user:
-            return error_response('用户未登录', 401)
-
-        # 验证输入数据
-        feeding_data = BottleFeedingCreate(**request.json)
-
-        # 验证婴儿权限
-        from app.models.models import Baby
-        baby = Baby.query.filter_by(id=feeding_data.baby_id, user_id=current_user.id).first()
-        if not baby:
-            return error_response('无权限访问该婴儿记录', 403)
-
-        # 创建奶粉喂养记录
-        feeding = Feeding(
-            feeding_type='bottle',
-            bottle_ml=feeding_data.bottle_ml,
-            start_time=feeding_data.timestamp,
-            baby_id=feeding_data.baby_id
-        )
-
-        db.session.add(feeding)
-        db.session.commit()
-
-        return success_response('奶粉喂养记录创建成功', FeedingResponse.from_orm(feeding).dict(), 201)
-
-    except Exception as e:
-        db.session.rollback()
-        return error_response(f'创建奶粉喂养记录失败: {str(e)}')
+# NOTE: legacy `/api/feeding/bottle` endpoint has been removed. Use
+# - POST /api/feeding/formula for formula feedings
+# - POST /api/feeding/breast-bottle for bottle-fed breastmilk
+# The old endpoint was removed to simplify API surface and avoid ambiguity.
 
 @feeding_bp.route('/breastToPump', methods=['POST'])
 @jwt_required()
@@ -131,13 +101,24 @@ def breast_to_pump():
         )
         db.session.add(pump)
 
-        # 更新或创建余量
-        inv = MilkInventory.query.filter_by(baby_id=data.baby_id).first()
-        if not inv:
-            inv = MilkInventory(baby_id=data.baby_id, remaining_ml=0)
+        # 使用原子更新来避免并发竞态：先尝试 UPDATE，如果没有行被更新则插入新行
+        table_name = MilkInventory.__table__.name
+        now = datetime.utcnow()
+        upd = db.session.execute(
+            text(f"UPDATE {table_name} SET remaining_ml = remaining_ml + :v, updated_at = :now WHERE baby_id = :bid"),
+            {"v": data.volume_ml, "now": now, "bid": data.baby_id}
+        )
+        if upd.rowcount == 0:
+            # 没有现有条目，插入一条新记录
+            inv = MilkInventory(baby_id=data.baby_id, remaining_ml=data.volume_ml, updated_at=now)
             db.session.add(inv)
-        inv.remaining_ml = (inv.remaining_ml or 0) + data.volume_ml
-        inv.updated_at = datetime.utcnow()
+            # 确保我们能返回剩余量
+            db.session.flush()
+            remaining = inv.remaining_ml
+        else:
+            # 查询最新值以返回
+            inv = MilkInventory.query.filter_by(baby_id=data.baby_id).first()
+            remaining = inv.remaining_ml
 
         db.session.commit()
 
@@ -145,7 +126,7 @@ def breast_to_pump():
             'pump_id': pump.id,
             'baby_id': data.baby_id,
             'volume_ml': data.volume_ml,
-            'remaining_ml': inv.remaining_ml
+            'remaining_ml': remaining
         }, 201)
     except Exception as e:
         db.session.rollback()
@@ -330,14 +311,14 @@ def get_feedings(baby_id):
         # 按日期范围过滤
         if start_date:
             try:
-                start_datetime = datetime.fromisoformat(start_date)
+                start_datetime = parse_iso_datetime(start_date)
                 query = query.filter(Feeding.start_time >= start_datetime)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
 
         if end_date:
             try:
-                end_datetime = datetime.fromisoformat(end_date)
+                end_datetime = parse_iso_datetime(end_date)
                 query = query.filter(Feeding.start_time <= end_datetime)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
@@ -350,6 +331,71 @@ def get_feedings(baby_id):
 
     except Exception as e:
         return error_response(f'获取喂养记录失败: {str(e)}')
+
+
+@feeding_bp.route('/count', methods=['GET'])
+@jwt_required()
+def count_feedings():
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        baby_id = request.args.get('baby_id')
+        if not baby_id:
+            return error_response('缺少 baby_id 参数', 400)
+        try:
+            baby_id = int(baby_id)
+        except ValueError:
+            return error_response('baby_id 必须为整数', 400)
+
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        # 默认：今天 00:00 到现在
+        if start_date:
+            try:
+                start_dt = parse_iso_datetime(start_date)
+            except ValueError:
+                return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        else:
+            # default to local day's 00:00 converted to UTC so "today" matches user's local date when frontend
+            # doesn't supply start_date. We compute local midnight then convert to UTC-aware naive datetime.
+            local_now = datetime.now()
+            local_midnight = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            # convert local midnight to UTC naive datetime for comparison with UTC stored DB timestamps
+            start_dt = datetime.utcfromtimestamp(local_midnight.timestamp())
+
+        if end_date:
+            try:
+                end_dt = parse_iso_datetime(end_date)
+            except ValueError:
+                return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        else:
+            # use current UTC now as end
+            end_dt = datetime.utcnow()
+
+        # Count only direct breastfeeding as "亲喂次数" per product decision
+        direct_count = DirectBreastfeeding.query.filter(
+            DirectBreastfeeding.baby_id == baby_id,
+            DirectBreastfeeding.start_time >= start_dt,
+            DirectBreastfeeding.start_time <= end_dt
+        ).count()
+
+        total = direct_count
+
+        return success_response('获取亲喂次数成功', {
+            'total': total,
+            'breakdown': {
+                'direct': direct_count
+            }
+        }, 200)
+    except Exception as e:
+        return error_response(f'获取喂养次数失败: {str(e)}')
 
 @feeding_bp.route('/default-baby', methods=['GET'])
 @jwt_required()
@@ -385,14 +431,14 @@ def get_feedings_for_default_baby():
         # 按日期范围过滤
         if start_date:
             try:
-                start_datetime = datetime.fromisoformat(start_date)
+                start_datetime = parse_iso_datetime(start_date)
                 query = query.filter(Feeding.start_time >= start_datetime)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
 
         if end_date:
             try:
-                end_datetime = datetime.fromisoformat(end_date)
+                end_datetime = parse_iso_datetime(end_date)
                 query = query.filter(Feeding.start_time <= end_datetime)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
@@ -551,16 +597,14 @@ def list_direct_breast(baby_id):
         end_date = request.args.get('end_date')
         q = DirectBreastfeeding.query.filter_by(baby_id=baby_id).order_by(DirectBreastfeeding.start_time.desc())
         if start_date:
-            from datetime import datetime as dt
             try:
-                sd = dt.fromisoformat(start_date)
+                sd = parse_iso_datetime(start_date)
                 q = q.filter(DirectBreastfeeding.start_time >= sd)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
         if end_date:
-            from datetime import datetime as dt
             try:
-                ed = dt.fromisoformat(end_date)
+                ed = parse_iso_datetime(end_date)
                 q = q.filter(DirectBreastfeeding.start_time <= ed)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
@@ -569,6 +613,37 @@ def list_direct_breast(baby_id):
         return success_response('获取亲喂记录成功', data, 200)
     except Exception as e:
         return error_response(f'获取亲喂记录失败: {str(e)}')
+
+
+@feeding_bp.route('/direct/active', methods=['GET'])
+@jwt_required()
+def get_active_direct():
+    """Return the active direct breastfeeding record (end_time is NULL) for a baby, if any."""
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        baby_id = request.args.get('baby_id')
+        if not baby_id:
+            return error_response('缺少 baby_id 参数', 400)
+        try:
+            baby_id = int(baby_id)
+        except ValueError:
+            return error_response('baby_id 必须为整数', 400)
+
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        rec = DirectBreastfeeding.query.filter_by(baby_id=baby_id).filter(DirectBreastfeeding.end_time.is_(None)).order_by(DirectBreastfeeding.start_time.desc()).first()
+        if not rec:
+            return success_response('没有活动的亲喂记录', None, 200)
+
+        return success_response('获取活动亲喂记录成功', DirectBreastResponse.from_orm(rec).dict(), 200)
+    except Exception as e:
+        return error_response(f'获取活动亲喂记录失败: {str(e)}')
 
 # ================== 新独立接口：瓶喂母乳 ==================
 @feeding_bp.route('/breast-bottle', methods=['POST'])
@@ -585,13 +660,17 @@ def create_breast_bottle():
         if not baby:
             return error_response('无权限访问该婴儿记录', 403)
 
-        inv = MilkInventory.query.filter_by(baby_id=data.baby_id).first()
-        if not inv:
-            inv = MilkInventory(baby_id=data.baby_id, remaining_ml=0)
-            db.session.add(inv)
-            db.session.flush()
-        if (inv.remaining_ml or 0) < data.volume_ml:
-            return error_response('剩余母乳量不足', 400)
+        # 使用原子更新：仅在剩余量足够时扣减，避免竞态条件
+        table_name = MilkInventory.__table__.name
+        now = datetime.utcnow()
+        upd = db.session.execute(
+            text(f"UPDATE {table_name} SET remaining_ml = remaining_ml - :v, updated_at = :now WHERE baby_id = :bid AND (remaining_ml IS NOT NULL AND remaining_ml >= :v)"),
+            {"v": data.volume_ml, "now": now, "bid": data.baby_id}
+        )
+        if upd.rowcount == 0:
+            inv_check = MilkInventory.query.filter_by(baby_id=data.baby_id).first()
+            if not inv_check or (inv_check.remaining_ml or 0) < data.volume_ml:
+                return error_response('剩余母乳量不足', 400)
 
         rec = BottleBreastFeeding(
             baby_id=data.baby_id,
@@ -601,11 +680,12 @@ def create_breast_bottle():
         )
         db.session.add(rec)
 
-        inv.remaining_ml = (inv.remaining_ml or 0) - data.volume_ml
-        inv.updated_at = datetime.utcnow()
+        # 查询并返回最新余量
+        inv = MilkInventory.query.filter_by(baby_id=data.baby_id).first()
+        remaining = inv.remaining_ml if inv else 0
 
         db.session.commit()
-        return success_response('瓶喂母乳记录成功', BottleBreastResponse.from_orm(rec).dict() | {'remaining_ml': inv.remaining_ml}, 201)
+        return success_response('瓶喂母乳记录成功', BottleBreastResponse.from_orm(rec).dict() | {'remaining_ml': remaining}, 201)
     except Exception as e:
         db.session.rollback()
         return error_response(f'记录瓶喂母乳失败: {str(e)}')
@@ -626,16 +706,14 @@ def list_breast_bottle(baby_id):
         end_date = request.args.get('end_date')
         q = BottleBreastFeeding.query.filter_by(baby_id=baby_id).order_by(BottleBreastFeeding.timestamp.desc())
         if start_date:
-            from datetime import datetime as dt
             try:
-                sd = dt.fromisoformat(start_date)
+                sd = parse_iso_datetime(start_date)
                 q = q.filter(BottleBreastFeeding.timestamp >= sd)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
         if end_date:
-            from datetime import datetime as dt
             try:
-                ed = dt.fromisoformat(end_date)
+                ed = parse_iso_datetime(end_date)
                 q = q.filter(BottleBreastFeeding.timestamp <= ed)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
@@ -644,6 +722,70 @@ def list_breast_bottle(baby_id):
         return success_response('获取瓶喂母乳记录成功', data, 200)
     except Exception as e:
         return error_response(f'获取瓶喂母乳记录失败: {str(e)}')
+
+
+@feeding_bp.route('/bottle-ml', methods=['GET'])
+@jwt_required()
+def bottle_ml_total():
+    """返回在时间范围内（默认今天 00:00 到现在）婴儿的瓶喂总毫升数（包含瓶喂母乳与配方奶）"""
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        baby_id = request.args.get('baby_id')
+        if not baby_id:
+            return error_response('缺少 baby_id 参数', 400)
+        try:
+            baby_id = int(baby_id)
+        except ValueError:
+            return error_response('baby_id 必须为整数', 400)
+
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        # 默认：今天 00:00 到现在（本地日的 00:00 转为 UTC）
+        if start_date:
+            try:
+                start_dt = parse_iso_datetime(start_date)
+            except ValueError:
+                return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        else:
+            sd = datetime.now()
+            sd = sd.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_dt = datetime.utcfromtimestamp(sd.timestamp())
+
+        if end_date:
+            try:
+                end_dt = parse_iso_datetime(end_date)
+            except ValueError:
+                return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        else:
+            end_dt = datetime.utcnow()
+
+        # Sum bottle ml from BottleBreastFeeding and FormulaFeeding
+        from sqlalchemy import func
+        bottle_sum = BottleBreastFeeding.query.with_entities(func.coalesce(func.sum(BottleBreastFeeding.volume_ml), 0)).filter(
+            BottleBreastFeeding.baby_id == baby_id,
+            BottleBreastFeeding.timestamp >= start_dt,
+            BottleBreastFeeding.timestamp <= end_dt
+        ).scalar() or 0
+
+        formula_sum = FormulaFeeding.query.with_entities(func.coalesce(func.sum(FormulaFeeding.volume_ml), 0)).filter(
+            FormulaFeeding.baby_id == baby_id,
+            FormulaFeeding.timestamp >= start_dt,
+            FormulaFeeding.timestamp <= end_dt
+        ).scalar() or 0
+
+        total_ml = int(bottle_sum) + int(formula_sum)
+
+        return success_response('获取瓶喂总毫升数成功', {'total_ml': total_ml}, 200)
+    except Exception as e:
+        return error_response(f'获取瓶喂总毫升数失败: {str(e)}')
 
 # ================== 新独立接口：配方奶粉 ==================
 @feeding_bp.route('/formula', methods=['POST'])
@@ -690,16 +832,14 @@ def list_formula(baby_id):
         end_date = request.args.get('end_date')
         q = FormulaFeeding.query.filter_by(baby_id=baby_id).order_by(FormulaFeeding.timestamp.desc())
         if start_date:
-            from datetime import datetime as dt
             try:
-                sd = dt.fromisoformat(start_date)
+                sd = parse_iso_datetime(start_date)
                 q = q.filter(FormulaFeeding.timestamp >= sd)
             except ValueError:
                 return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
         if end_date:
-            from datetime import datetime as dt
             try:
-                ed = dt.fromisoformat(end_date)
+                ed = parse_iso_datetime(end_date)
                 q = q.filter(FormulaFeeding.timestamp <= ed)
             except ValueError:
                 return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)

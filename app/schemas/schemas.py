@@ -85,6 +85,8 @@ class BottleFeedingCreate(BaseModel):
     bottle_ml: int
     timestamp: Optional[datetime] = None
     baby_id: int
+    # 如果是从母乳瓶喂（用库存母乳），前端可传 is_breast=True 来指示应从剩余母乳中扣除
+    is_breast: Optional[bool] = False
 
 class BreastFeedingStart(BaseModel):
     start_time: datetime

@@ -2,9 +2,10 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models.models import Feeding, Diaper, Sleep
 from app.schemas.schemas import StatsRequest
-from app.utils.helpers import get_current_user, error_response
+from app.utils.helpers import get_current_user, error_response, parse_iso_datetime
+from sqlalchemy import func
 from flask_jwt_extended import jwt_required
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date as _date
 from collections import defaultdict
 
 stats_bp = Blueprint('stats_bp', __name__)
@@ -421,3 +422,131 @@ def get_growth_stats():
 
     except Exception as e:
         return error_response(f'获取生长发育统计失败: {str(e)}')
+
+@stats_bp.route('/weekly/overview', methods=['POST'])
+@jwt_required()
+def get_weekly_overview():
+    """返回近 N 天（默认7天，排除今天）的聚合数据，用于仪表盘柱状图。
+
+    返回结构：{
+      dates: [iso-date...],
+      direct_counts: [],
+      wet_counts: [],
+      dirty_counts: [],
+      sleep_minutes: [],
+      bottle_ml: []
+    }
+    """
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        # 验证输入
+        stats_request = StatsRequest(**request.json)
+
+        from app.models.models import Baby, DirectBreastfeeding, BottleBreastFeeding, FormulaFeeding, Diaper, Sleep
+
+        baby = Baby.query.filter_by(id=stats_request.baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        # Build list of dates between start_date and end_date inclusive
+        start_dt = stats_request.start_date
+        end_dt = stats_request.end_date
+        # pydantic may leave strings; normalize using parse_iso_datetime if needed
+        if isinstance(start_dt, str):
+            start_dt = parse_iso_datetime(start_dt)
+        elif isinstance(start_dt, _date):
+            # convert date to datetime at midnight
+            start_dt = datetime.combine(start_dt, datetime.min.time())
+        if isinstance(end_dt, str):
+            end_dt = parse_iso_datetime(end_dt)
+        elif isinstance(end_dt, _date):
+            end_dt = datetime.combine(end_dt, datetime.max.time())
+        # normalize to date boundaries
+        dates = []
+        cur = start_dt.date()
+        end_date_only = end_dt.date()
+        while cur <= end_date_only:
+            dates.append(cur.isoformat())
+            cur = cur + timedelta(days=1)
+
+        # prepare result maps
+        direct_map = {d: 0 for d in dates}
+        wet_map = {d: 0 for d in dates}
+        dirty_map = {d: 0 for d in dates}
+        sleep_map = {d: 0.0 for d in dates}
+        bottle_map = {d: 0.0 for d in dates}
+
+        # Direct breastfeeding counts per day
+        direct_q = DirectBreastfeeding.query.with_entities(func.date(DirectBreastfeeding.start_time).label('d'), func.count(DirectBreastfeeding.id)).filter(
+            DirectBreastfeeding.baby_id == stats_request.baby_id,
+            DirectBreastfeeding.start_time >= start_dt,
+            DirectBreastfeeding.start_time <= end_dt
+        ).group_by(func.date(DirectBreastfeeding.start_time)).all()
+        for d, c in direct_q:
+            key = d.isoformat() if hasattr(d, 'isoformat') else str(d)
+            direct_map[key] = int(c)
+
+        # Diaper counts
+        diaper_q = Diaper.query.with_entities(func.date(Diaper.timestamp).label('d'), Diaper.diaper_type, func.count(Diaper.id)).filter(
+            Diaper.baby_id == stats_request.baby_id,
+            Diaper.timestamp >= start_dt,
+            Diaper.timestamp <= end_dt
+        ).group_by(func.date(Diaper.timestamp), Diaper.diaper_type).all()
+        for d, dtype, c in diaper_q:
+            key = d.isoformat() if hasattr(d, 'isoformat') else str(d)
+            if dtype == 'wet':
+                wet_map[key] = int(c)
+            elif dtype == 'dirty':
+                dirty_map[key] = int(c)
+
+        # Sleep minutes per day (sum duration_minutes for sleeps that have end_time)
+        sleeps = Sleep.query.filter(
+            Sleep.baby_id == stats_request.baby_id,
+            Sleep.start_time >= start_dt,
+            Sleep.start_time <= end_dt,
+            Sleep.end_time != None
+        ).all()
+        for s in sleeps:
+            if s.end_time:
+                key = s.start_time.date().isoformat() if hasattr(s.start_time, 'date') else str(s.start_time)
+                sleep_map[key] += float(getattr(s, 'duration_minutes', 0) or 0)
+
+        # Bottle ml per day: sum BottleBreastFeeding.volume_ml + FormulaFeeding.volume_ml
+        bottle_q1 = BottleBreastFeeding.query.with_entities(func.date(BottleBreastFeeding.timestamp).label('d'), func.coalesce(func.sum(BottleBreastFeeding.volume_ml), 0)).filter(
+            BottleBreastFeeding.baby_id == stats_request.baby_id,
+            BottleBreastFeeding.timestamp >= start_dt,
+            BottleBreastFeeding.timestamp <= end_dt
+        ).group_by(func.date(BottleBreastFeeding.timestamp)).all()
+        for d, s in bottle_q1:
+            key = d.isoformat() if hasattr(d, 'isoformat') else str(d)
+            bottle_map[key] += float(s or 0)
+
+        bottle_q2 = FormulaFeeding.query.with_entities(func.date(FormulaFeeding.timestamp).label('d'), func.coalesce(func.sum(FormulaFeeding.volume_ml), 0)).filter(
+            FormulaFeeding.baby_id == stats_request.baby_id,
+            FormulaFeeding.timestamp >= start_dt,
+            FormulaFeeding.timestamp <= end_dt
+        ).group_by(func.date(FormulaFeeding.timestamp)).all()
+        for d, s in bottle_q2:
+            key = d.isoformat() if hasattr(d, 'isoformat') else str(d)
+            bottle_map[key] += float(s or 0)
+
+        # Build arrays aligned to dates
+        direct_counts = [direct_map[d] for d in dates]
+        wet_counts = [wet_map[d] for d in dates]
+        dirty_counts = [dirty_map[d] for d in dates]
+        sleep_minutes = [round(sleep_map[d], 2) for d in dates]
+        bottle_ml = [round(bottle_map[d], 2) for d in dates]
+
+        return jsonify({'message': '获取周汇总成功', 'data': {
+            'dates': dates,
+            'direct_counts': direct_counts,
+            'wet_counts': wet_counts,
+            'dirty_counts': dirty_counts,
+            'sleep_minutes': sleep_minutes,
+            'bottle_ml': bottle_ml
+        }}), 200
+    except Exception as e:
+        return error_response(f'获取周汇总失败: {str(e)}')
