@@ -199,6 +199,14 @@
             <p class="text-gray-600">近7天统计（不含今天）</p>
             <canvas id="weekly-chart" style="width:100%;height:260px;display:block;"></canvas>
         </div>
+
+        <!-- 今日时间线（显示当天事件时间线） -->
+        <div id="today-timeline-card" class="mt-6 bg-white rounded-xl p-4 shadow w-full">
+            <p class="text-gray-600">今日时间线</p>
+            <div id="today-timeline" class="mt-4">
+                <!-- timeline items will be injected here -->
+            </div>
+        </div>
     </div> <!-- #main-interface -->
 
     <!-- 全局页面内通知（支持多条、队列、自动消失与手动关闭） -->
@@ -372,6 +380,7 @@
                 };
             }
 
+            
             try {
                 console.log("Bearer xxxxx");
                 console.log(`Bearer ${token}`);
@@ -553,8 +562,8 @@
             } else {
                 document.getElementById('baby-age').textContent = '-';
             }
-            // 更新统计信息
-            try { fetchAndUpdateStats(currentBabyId); } catch (e) { console.error('fetch stats error', e); }
+            // 更新统计信息与时间线（在一个统一入口进行刷新）
+            try { refreshUI(currentBabyId); } catch (e) { console.error('refresh UI error', e); }
             // 尝试恢复任何正在进行中的计时（亲喂 / 睡眠）
             try { fetchAndResumeActiveTimers(currentBabyId); } catch (e) { console.error('resume timers error', e); }
         }
@@ -775,8 +784,8 @@
                 setTimeout(() => {
                     document.getElementById('bottle-feed-modal').classList.add('hidden');
                     document.getElementById('bottle-feed-form').reset();
-                    // 刷新统计信息（剩余母乳量 + 今日喂养次数）
-                    try { fetchAndUpdateStats(currentBabyId); } catch(e){}
+                    // 刷新统计信息与时间线
+                    try { refreshUI(currentBabyId); } catch(e){}
                 }, 600);
             } catch (err) {
                 console.error('瓶喂提交错误', err);
@@ -815,7 +824,7 @@
                 setTimeout(() => {
                     document.getElementById('diaper-modal').classList.add('hidden');
                     document.getElementById('diaper-form').reset();
-                    try { fetchAndUpdateStats(currentBabyId); } catch(e){}
+                    try { refreshUI(currentBabyId); } catch(e){}
                 }, 600);
             } catch (err) {
                 console.error('大小便提交错误', err);
@@ -889,6 +898,8 @@
                 const serverStartIso = (data && data.data && data.data.start_time) || data.start_time || startTime;
                 currentTimerMode = 'sleep';
                 openTimer3D(serverStartIso);
+                // Refresh UI so timeline shows the started sleep immediately
+                try { refreshUI(currentBabyId); } catch (e) { console.error('refresh after sleep start failed', e); }
             } catch (e) {
                 console.error('startSleep error', e);
                 showNotification('开始睡眠请求失败', 'error');
@@ -947,6 +958,8 @@
                 try { localStorage.setItem(`active_direct_${currentBabyId}`, JSON.stringify({ id: currentDirectId, start_time: serverStartIso })); } catch (e) {}
                 currentTimerMode = 'direct';
                 openTimer3D(serverStartIso);
+                // Refresh UI so timeline shows the started direct feeding immediately
+                try { refreshUI(currentBabyId); } catch (e) { console.error('refresh after direct start failed', e); }
             } catch (e) {
                 console.error('startDirectBreast error', e);
                 showNotification('开始亲喂请求失败', 'error');
@@ -977,8 +990,8 @@
                 currentDirectId = null;
                 try { localStorage.removeItem(`active_direct_${currentBabyId}`); } catch (e) {}
                 showNotification('亲喂已结束并保存', 'success');
-                // 刷新统计信息（喂养次数、剩余母乳、睡眠等）
-                try { fetchAndUpdateStats(currentBabyId); } catch(e) { console.error('refresh stats after direct end failed', e); }
+                // 刷新统计与时间线
+                try { refreshUI(currentBabyId); } catch(e) { console.error('refresh UI after direct end failed', e); }
             } catch (e) {
                 console.error('stopDirectBreast error', e);
                 showNotification('结束亲喂请求失败', 'error');
@@ -1009,8 +1022,8 @@
                 // 停止计时（关闭操作由调用处负责）
                 currentSleepId = null;
                 try { localStorage.removeItem(`active_sleep_${currentBabyId}`); } catch (e) {}
-                // 更新页面统计（刷新睡眠时长与喂养次数）
-                try { fetchAndUpdateStats(currentBabyId); } catch(e) { console.error('refresh stats after sleep end failed', e); }
+                // 更新页面统计与时间线
+                try { refreshUI(currentBabyId); } catch(e) { console.error('refresh UI after sleep end failed', e); }
                 showNotification('睡眠已结束并保存', 'success');
             } catch (e) {
                 console.error('stopSleep error', e);
@@ -1056,6 +1069,145 @@
                 console.error("获取用户信息时发生错误:", error);
             }
         }
+
+        // 今日时间线渲染与加载（可被 refreshUI 与其他操作调用）
+        async function fetchAndRenderTimeline(babyId){
+            if (!babyId) return;
+            const token = localStorage.getItem('authToken');
+            if (!token) return;
+
+            const startOfDay = new Date();
+            startOfDay.setHours(0,0,0,0);
+            const startIso = startOfDay.toISOString();
+            const endIso = new Date().toISOString();
+
+            try {
+                // Parallel fetch event lists
+                const [feedRes, directRes, sleepRes, bottleRes, formulaRes, pumpRes, diaperRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/feeding/${babyId}?start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {headers: {'Authorization': `Bearer ${token}`}}),
+                    fetch(`${API_BASE_URL}/feeding/direct/${babyId}?start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {headers: {'Authorization': `Bearer ${token}`}}),
+                    fetch(`${API_BASE_URL}/sleep/${babyId}?start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {headers: {'Authorization': `Bearer ${token}`}}),
+                    fetch(`${API_BASE_URL}/feeding/breast-bottle/${babyId}?start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {headers: {'Authorization': `Bearer ${token}`}}),
+                    fetch(`${API_BASE_URL}/feeding/formula/${babyId}?start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {headers: {'Authorization': `Bearer ${token}`}}),
+                    fetch(`${API_BASE_URL}/feeding/pumps/${babyId}?start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {headers: {'Authorization': `Bearer ${token}`}}),
+                    fetch(`${API_BASE_URL}/diaper/${babyId}?start_date=${encodeURIComponent(startIso)}&end_date=${encodeURIComponent(endIso)}`, {headers: {'Authorization': `Bearer ${token}`}})
+                ]);
+
+                const results = await Promise.all([feedRes.json().catch(()=>({})), directRes.json().catch(()=>({})), sleepRes.json().catch(()=>({})), bottleRes.json().catch(()=>({})), formulaRes.json().catch(()=>({})), pumpRes.json().catch(()=>({})), diaperRes.json().catch(()=>({}))]);
+
+                const [feedJ, directJ, sleepJ, bottleJ, formulaJ, pumpJ, diaperJ] = results;
+
+                const items = [];
+
+                // feedings (includes bottle & breast generic records) - use start_time / bottle_ml
+                if (feedJ && feedJ.data && Array.isArray(feedJ.data)){
+                    for (const f of feedJ.data){
+                        items.push({
+                            type: f.feeding_type === 'breast' ? 'breast_generic' : 'formula',
+                            title: f.feeding_type === 'breast' ? '母乳（一般）' : '配方奶（瓶喂）',
+                            start: f.start_time || f.timestamp || f.created_at,
+                            end: f.end_time || null,
+                            ml: f.bottle_ml || f.breast_ml || 0,
+                            notes: f.notes || ''
+                        });
+                    }
+                }
+
+                // bottle breast (detailed)
+                if (bottleJ && bottleJ.data && Array.isArray(bottleJ.data)){
+                    for (const b of bottleJ.data){
+                        items.push({ type: 'bottle_breast', title: '瓶喂（母乳）', start: b.timestamp||b.created_at, ml: b.volume_ml, notes: b.notes||'' });
+                    }
+                }
+                // formula
+                if (formulaJ && formulaJ.data && Array.isArray(formulaJ.data)){
+                    for (const fb of formulaJ.data){
+                        items.push({ type: 'formula', title: '瓶喂（配方）', start: fb.timestamp||fb.created_at, ml: fb.volume_ml, notes: fb.notes||'' });
+                    }
+                }
+
+                // pumps
+                if (pumpJ && pumpJ.data && Array.isArray(pumpJ.data)){
+                    for (const p of pumpJ.data){
+                        items.push({ type: 'pump', title: '泵奶', start: p.start_time||p.created_at, end: p.end_time||null, ml: p.volume_ml, notes: p.notes||'' });
+                    }
+                }
+
+                // direct breast
+                if (directJ && directJ.data && Array.isArray(directJ.data)){
+                    for (const d of directJ.data){
+                        items.push({ type: 'direct', title: '亲喂', start: d.start_time, end: d.end_time||null, notes: d.notes||'' });
+                    }
+                }
+
+                // sleep
+                if (sleepJ && sleepJ.data && Array.isArray(sleepJ.data)){
+                    for (const s of sleepJ.data){
+                        items.push({ type: 'sleep', title: '睡眠', start: s.start_time, end: s.end_time||null, notes: s.notes||'' });
+                    }
+                }
+
+                // diapers
+                if (diaperJ && diaperJ.data && Array.isArray(diaperJ.data)){
+                    for (const dp of diaperJ.data){
+                        items.push({ type: dp.diaper_type === 'dirty' ? 'dirty' : 'wet', title: dp.diaper_type === 'dirty' ? '大便' : '小便', start: dp.timestamp, notes: dp.notes||'' });
+                    }
+                }
+
+                // sort by time (use start; fallback created_at). Convert ISO to timestamp
+                items.sort((a,b)=>{ const ta = a.start? Date.parse(a.start):0; const tb = b.start? Date.parse(b.start):0; return ta - tb; });
+
+                renderTimelineItems(items);
+
+            } catch (e){
+                console.error('fetchAndRenderTimeline error', e);
+            }
+        }
+
+        function renderTimelineItems(items){
+            const container = document.getElementById('today-timeline');
+            if (!container) return;
+            if (!items || items.length===0){ container.innerHTML = '<p class="text-sm text-gray-500">今天还没有记录</p>'; return; }
+
+            // Build timeline HTML
+            let html = '<div class="relative pl-12">';
+            // vertical line
+            html += '<div class="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200"></div>';
+
+            for (const it of items){
+                const color = (it.type==='direct')? 'bg-green-500' : (it.type==='sleep')? 'bg-yellow-400' : (it.type==='pump')? 'bg-purple-500' : (it.type==='bottle_breast')? 'bg-teal-400' : (it.type==='formula')? 'bg-blue-500' : (it.type==='dirty')? 'bg-red-500' : 'bg-indigo-400';
+                const timeText = it.end ? `${formatTime(it.start)} - ${formatTime(it.end)}` : formatTime(it.start);
+                const mlText = (it.ml && it.ml>0) ? `<div class="text-sm text-gray-700 font-medium">${it.ml} ml</div>` : '';
+                const notes = it.notes ? `<div class="text-sm text-gray-600 mt-1">${escapeHtml(it.notes)}</div>` : '';
+
+                html += `
+                    <div class="mb-4 flex items-start">
+                        <div class="w-10 flex flex-col items-center">
+                            <div class="w-3 h-3 rounded-full ${color} mt-1"></div>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <div class="bg-white border-l-4 ${color} p-3 rounded-lg shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-sm font-semibold text-gray-800">${escapeHtml(it.title)}</div>
+                                    <div class="text-xs text-gray-500">${escapeHtml(timeText)}</div>
+                                </div>
+                                ${mlText}
+                                ${notes}
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function formatTime(iso){
+            if (!iso) return '';
+            try{ const d = new Date(iso); return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); } catch(e){ return iso; }
+        }
+
+        function escapeHtml(s){ if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
         // 刷新统计：剩余母乳量 & 今日喂养次数
         async function fetchAndUpdateStats(babyId) {
@@ -1131,6 +1283,22 @@
 
                 // 同步加载周统计图（默认：过去7天，不含今天）
                 try { await fetchAndRenderWeeklyChart(babyId); } catch(e){ console.error('weekly chart load failed', e); }
+        }
+
+        // 统一刷新界面（统计 + 周视图 + 今日时间线）
+        async function refreshUI(babyId){
+            if (!babyId) return;
+            try {
+                // Update stats and weekly chart first, then timeline.
+                await fetchAndUpdateStats(babyId);
+            } catch (e) {
+                console.error('refreshUI stats error', e);
+            }
+            try {
+                await fetchAndRenderTimeline(babyId);
+            } catch (e) {
+                console.error('refreshUI timeline error', e);
+            }
         }
 
             // 获取并渲染周统计（不包含今天）

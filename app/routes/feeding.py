@@ -724,6 +724,54 @@ def list_breast_bottle(baby_id):
         return error_response(f'获取瓶喂母乳记录失败: {str(e)}')
 
 
+@feeding_bp.route('/pumps/<int:baby_id>', methods=['GET'])
+@jwt_required()
+def list_pumps(baby_id):
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        q = MilkPump.query.filter_by(baby_id=baby_id).order_by(MilkPump.start_time.desc())
+
+        if start_date:
+            try:
+                sd = parse_iso_datetime(start_date)
+                q = q.filter(MilkPump.start_time >= sd)
+            except ValueError:
+                return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        if end_date:
+            try:
+                ed = parse_iso_datetime(end_date)
+                q = q.filter(MilkPump.start_time <= ed)
+            except ValueError:
+                return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+
+        recs = q.all()
+        # Simple serialization
+        data = []
+        for r in recs:
+            data.append({
+                'id': r.id,
+                'start_time': r.start_time.isoformat() if r.start_time else None,
+                'end_time': r.end_time.isoformat() if r.end_time else None,
+                'volume_ml': r.volume_ml,
+                'notes': r.notes,
+                'created_at': r.created_at.isoformat() if r.created_at else None
+            })
+
+        return success_response('获取泵奶记录成功', data, 200)
+    except Exception as e:
+        return error_response(f'获取泵奶记录失败: {str(e)}')
+
+
 @feeding_bp.route('/bottle-ml', methods=['GET'])
 @jwt_required()
 def bottle_ml_total():

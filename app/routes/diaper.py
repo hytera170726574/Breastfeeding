@@ -26,15 +26,18 @@ def create_diaper():
         if not baby:
             return error_response('无权限访问该婴儿记录', 403)
 
+
         # 创建大小便记录
         diaper = Diaper(
             diaper_type=diaper_data.diaper_type,
             baby_id=diaper_data.baby_id
         )
 
-        # 如果提供了时间戳，使用它；否则使用当前时间
+        # 如果提供了时间戳或备注，使用它们；否则使用默认值
         if diaper_data.timestamp:
             diaper.timestamp = diaper_data.timestamp
+        if getattr(diaper_data, 'notes', None) is not None:
+            diaper.notes = diaper_data.notes
 
         db.session.add(diaper)
         db.session.commit()
@@ -65,33 +68,66 @@ def get_diapers(baby_id):
         end_date = request.args.get('end_date')
         diaper_type = request.args.get('type')  # 'wet', 'dirty', 或 None(全部)
 
-        # 构建查询
-        query = Diaper.query.filter_by(baby_id=baby_id).order_by(Diaper.timestamp.desc())
-
-        # 按类型过滤
+        # 基础查询（先按 baby_id 和可选类型过滤）
+        base_q = Diaper.query.filter_by(baby_id=baby_id)
         if diaper_type and diaper_type in ['wet', 'dirty']:
-            query = query.filter_by(diaper_type=diaper_type)
+            base_q = base_q.filter_by(diaper_type=diaper_type)
 
-        # 按日期范围过滤
-        if start_date:
-            try:
-                start_datetime = parse_iso_datetime(start_date)
-                query = query.filter(Diaper.timestamp >= start_datetime)
-            except ValueError:
-                return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        # 解析日期范围：支持 YYYY-MM-DD 或 ISO 时间。如果两者都未提供，默认取今日 00:00 到现在
+        start_datetime = None
+        end_datetime = None
+        try:
+            if start_date:
+                s = start_date
+                if len(s) == 10 and s.count('-') == 2:
+                    s = s + 'T00:00:00'
+                start_datetime = parse_iso_datetime(s)
+            if end_date:
+                e = end_date
+                if len(e) == 10 and e.count('-') == 2:
+                    e = e + 'T23:59:59.999'
+                end_datetime = parse_iso_datetime(e)
+        except ValueError:
+            return error_response('开始/结束日期格式错误，应为 YYYY-MM-DD 或 ISO 格式', 400)
 
-        if end_date:
-            try:
-                end_datetime = parse_iso_datetime(end_date)
-                query = query.filter(Diaper.timestamp <= end_datetime)
-            except ValueError:
-                return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        from datetime import datetime as _dt
+        if start_datetime is None and end_datetime is None:
+            # 默认：今天的本地日期窗口（以 UTC 存储的 naive 时间为准）
+            now = _dt.utcnow()
+            start_datetime = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_datetime = now
+        elif start_datetime is None and end_datetime is not None:
+            # 如果只提供 end，则把 start 设为当天 00:00
+            s = end_datetime
+            start_datetime = s.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif end_datetime is None and start_datetime is not None:
+            # 如果只提供 start，则把 end 设为 now
+            end_datetime = _dt.utcnow()
 
-        # 执行查询
-        diapers = query.all()
-        diapers_data = [DiaperResponse.from_orm(diaper) for diaper in diapers]
+        # 在 base 查询上应用时间过滤
+        filtered_q = base_q.filter(Diaper.timestamp >= start_datetime, Diaper.timestamp <= end_datetime)
 
-        return success_response('获取大小便记录成功', diapers_data, 200)
+        # 支持简单分页参数 limit/offset（可选）
+        try:
+            limit = int(request.args.get('limit', 1000))
+            offset = int(request.args.get('offset', 0))
+        except Exception:
+            return error_response('limit/offset 必须为整数', 400)
+
+        total = filtered_q.count()
+        diapers = filtered_q.order_by(Diaper.timestamp.asc()).offset(offset).limit(limit).all()
+        diapers_data = [DiaperResponse.from_orm(diaper).dict() for diaper in diapers]
+
+        # 返回列表（data 仍为数组以兼容前端），并在 meta 中包含分页信息
+        payload = {
+            'items': diapers_data,
+            'meta': {
+                'total': total,
+                'limit': limit,
+                'offset': offset
+            }
+        }
+        return jsonify({'message': '获取大小便记录成功', 'data': diapers_data, 'meta': payload['meta']}), 200
 
     except Exception as e:
         return error_response(f'获取大小便记录失败: {str(e)}')
@@ -120,33 +156,51 @@ def get_diapers_for_default_baby():
         end_date = request.args.get('end_date')
         diaper_type = request.args.get('type')  # 'wet', 'dirty', 或 None(全部)
 
-        # 构建查询
-        query = Diaper.query.filter_by(baby_id=baby.id).order_by(Diaper.timestamp.desc())
-
-        # 按类型过滤
+        # 基础查询
+        base_q = Diaper.query.filter_by(baby_id=baby.id)
         if diaper_type and diaper_type in ['wet', 'dirty']:
-            query = query.filter_by(diaper_type=diaper_type)
+            base_q = base_q.filter_by(diaper_type=diaper_type)
 
-        # 按日期范围过滤
-        if start_date:
-            try:
-                start_datetime = parse_iso_datetime(start_date)
-                query = query.filter(Diaper.timestamp >= start_datetime)
-            except ValueError:
-                return error_response('开始日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        # 解析并应用时间范围（与上方实现保持一致）
+        start_datetime = None
+        end_datetime = None
+        try:
+            if start_date:
+                s = start_date
+                if len(s) == 10 and s.count('-') == 2:
+                    s = s + 'T00:00:00'
+                start_datetime = parse_iso_datetime(s)
+            if end_date:
+                e = end_date
+                if len(e) == 10 and e.count('-') == 2:
+                    e = e + 'T23:59:59.999'
+                end_datetime = parse_iso_datetime(e)
+        except ValueError:
+            return error_response('开始/结束日期格式错误，应为 YYYY-MM-DD 或 ISO 格式', 400)
 
-        if end_date:
-            try:
-                end_datetime = parse_iso_datetime(end_date)
-                query = query.filter(Diaper.timestamp <= end_datetime)
-            except ValueError:
-                return error_response('结束日期格式错误，应为 ISO 格式 (YYYY-MM-DDTHH:MM:SS)', 400)
+        from datetime import datetime as _dt
+        if start_datetime is None and end_datetime is None:
+            now = _dt.utcnow()
+            start_datetime = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_datetime = now
+        elif start_datetime is None and end_datetime is not None:
+            start_datetime = end_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif end_datetime is None and start_datetime is not None:
+            end_datetime = _dt.utcnow()
 
-        # 执行查询
-        diapers = query.all()
-        diapers_data = [DiaperResponse.from_orm(diaper) for diaper in diapers]
+        filtered_q = base_q.filter(Diaper.timestamp >= start_datetime, Diaper.timestamp <= end_datetime)
 
-        return success_response('获取大小便记录成功', diapers_data, 200)
+        try:
+            limit = int(request.args.get('limit', 1000))
+            offset = int(request.args.get('offset', 0))
+        except Exception:
+            return error_response('limit/offset 必须为整数', 400)
+
+        total = filtered_q.count()
+        diapers = filtered_q.order_by(Diaper.timestamp.asc()).offset(offset).limit(limit).all()
+        diapers_data = [DiaperResponse.from_orm(diaper).dict() for diaper in diapers]
+
+        return jsonify({'message': '获取大小便记录成功', 'data': diapers_data, 'meta': {'total': total, 'limit': limit, 'offset': offset}}), 200
 
     except Exception as e:
         return error_response(f'获取大小便记录失败: {str(e)}')

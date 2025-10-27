@@ -125,6 +125,7 @@ class DiaperCreate(BaseModel):
     diaper_type: str = Field(..., regex='^(wet|dirty)$')  # 只能是 wet 或 dirty
     baby_id: int
     timestamp: Optional[datetime] = None
+    notes: Optional[str] = None
 
 class DiaperUpdate(BaseModel):
     diaper_type: Optional[str] = Field(None, regex='^(wet|dirty)$')

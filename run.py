@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     # Host/port can be configured via environment variables for flexibility
     host ="0.0.0.0"#os.environ.get('HOST', os.environ.get('FLASK_RUN_HOST', '0.0.0.0'))
-    port = int(os.environ.get('PORT', os.environ.get('FLASK_RUN_PORT', 5000)))
+    port = int(os.environ.get('PORT', os.environ.get('FLASK_RUN_PORT', 5001)))
     debug = os.environ.get('FLASK_DEBUG', '1') in ('1', 'true', 'True')
 
     logger.info(f"Starting app on {host}:{port} (debug={debug})")
