@@ -100,7 +100,7 @@ def get_baby(baby_id):
         if not baby:
             return error_response('婴儿信息不存在或无权限访问', 404)
 
-        return success_response('获取婴儿信息成功', BabyResponse.from_orm(baby).dict()), 200
+        return success_response('获取婴儿信息成功', BabyResponse.from_orm(baby).dict(), status_code=200)
 
     except Exception as e:
         return error_response(f'获取婴儿信息失败: {str(e)}')
@@ -130,7 +130,7 @@ def update_baby(baby_id):
 
         db.session.commit()
 
-        return success_response('婴儿信息更新成功', BabyResponse.from_orm(baby).dict()), 200
+        return success_response('婴儿信息更新成功', BabyResponse.from_orm(baby).dict(), status_code=200)
 
     except Exception as e:
         db.session.rollback()
@@ -158,7 +158,7 @@ def delete_baby(baby_id):
         db.session.delete(baby)
         db.session.commit()
 
-        return success_response('婴儿信息删除成功'), 200
+        return success_response('婴儿信息删除成功', status_code=200)
 
     except Exception as e:
         db.session.rollback()
@@ -178,11 +178,18 @@ def set_default_baby(baby_id):
         if not baby:
             return error_response('婴儿信息不存在或无权限访问', 404)
 
+        # 记录当前值以便排查
+        logger.info(f"用户 {current_user.id} - 旧 default_baby_id = {current_user.default_baby_id}")
+
         # 设置为默认婴儿
         current_user.default_baby_id = baby_id
         db.session.commit()
 
-        return success_response(message=f'已将 {baby.name} 设置为默认婴儿',status_code=200)
+        # 确认已写回数据库（刷新对象）并记录新值
+        logger.info(f"用户 {current_user.id} - 新 default_baby_id = {current_user.default_baby_id}")
+
+        # 返回设置后的婴儿对象作为权威信息，便于客户端更新
+        return success_response(message=f'已将 {baby.name} 设置为默认婴儿', data=BabyResponse.from_orm(baby).dict(), status_code=200)
 
     except Exception as e:
         db.session.rollback()
@@ -197,13 +204,17 @@ def get_default_baby():
         if not current_user:
             return error_response('用户未登录', 401)
 
+        # 记录当前用户默认宝宝以便排查
+        logger.info(f"获取默认宝宝请求 - 用户 {current_user.id} 当前 default_baby_id = {current_user.default_baby_id}")
+
         # 获取默认婴儿
         if current_user.default_baby_id:
             baby = Baby.query.filter_by(id=current_user.default_baby_id, user_id=current_user.id).first()
             if baby:
-                return success_response('获取默认婴儿成功', BabyResponse.from_orm(baby).dict()), 200
+                logger.info(f"返回默认宝宝 id={baby.id} name={baby.name} for user {current_user.id}")
+                return success_response('获取默认婴儿成功', BabyResponse.from_orm(baby).dict(), status_code=200)
 
-        return error_response('未设置默认婴儿'), 404
+        return error_response('未设置默认婴儿', 404)
 
     except Exception as e:
         return error_response(f'获取默认婴儿失败: {str(e)}')

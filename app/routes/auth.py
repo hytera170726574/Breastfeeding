@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify, render_template
 from app import db
 import logging
-from app.models.models import User
-from app.schemas.schemas import UserCreate, UserLogin, UserResponse
+from app.models.models import User, Baby
+from app.schemas.schemas import UserCreate, UserLogin, UserResponse, BabyResponse
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import check_password_hash
 
@@ -64,10 +64,18 @@ def login():
         access_token = create_access_token(identity=user.id)
         user_response = UserResponse.from_orm(user)
 
+        # 如果用户设置了默认宝宝，一并返回该宝宝信息，便于客户端在登录后立即使用
+        default_baby_data = None
+        if user.default_baby_id:
+            baby = Baby.query.filter_by(id=user.default_baby_id, user_id=user.id).first()
+            if baby:
+                default_baby_data = BabyResponse.from_orm(baby).dict()
+
         return jsonify({
             'message': '登录成功',
             'access_token': access_token,
-            'user': user_response.dict()
+            'user': user_response.dict(),
+            'default_baby': default_baby_data
         }), 200
 
     except Exception as e:
@@ -80,3 +88,16 @@ def login_page():
 @auth_bp.route('/dashboard', methods=['GET'])
 def dashboard_page():
     return render_template('dashboard.html')
+
+
+@auth_bp.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    try:
+        # For now we don't maintain a token revocation list. Client should delete the token.
+        identity = get_jwt_identity()
+        logger.info(f"Logout requested by user: {identity}")
+        return jsonify({'message': '已退出登录'}), 200
+    except Exception as e:
+        logger.exception('Logout error')
+        return jsonify({'error': str(e)}), 500

@@ -343,7 +343,10 @@ def count_feedings():
 
         baby_id = request.args.get('baby_id')
         if not baby_id:
-            return error_response('缺少 baby_id 参数', 400)
+            # fallback to user's default baby if available
+            if not current_user.default_baby_id:
+                return error_response('缺少 baby_id 参数，且未设置默认婴儿', 400)
+            baby_id = current_user.default_baby_id
         try:
             baby_id = int(baby_id)
         except ValueError:
@@ -626,7 +629,9 @@ def get_active_direct():
 
         baby_id = request.args.get('baby_id')
         if not baby_id:
-            return error_response('缺少 baby_id 参数', 400)
+            if not current_user.default_baby_id:
+                return error_response('缺少 baby_id 参数，且未设置默认婴儿', 400)
+            baby_id = current_user.default_baby_id
         try:
             baby_id = int(baby_id)
         except ValueError:
@@ -783,7 +788,9 @@ def bottle_ml_total():
 
         baby_id = request.args.get('baby_id')
         if not baby_id:
-            return error_response('缺少 baby_id 参数', 400)
+            if not current_user.default_baby_id:
+                return error_response('缺少 baby_id 参数，且未设置默认婴儿', 400)
+            baby_id = current_user.default_baby_id
         try:
             baby_id = int(baby_id)
         except ValueError:

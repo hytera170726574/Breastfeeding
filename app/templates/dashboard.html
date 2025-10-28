@@ -108,7 +108,11 @@
                 <div id="baby-info" class="bg-white rounded-xl shadow-md p-4 w-full mb-4">
                     <div class="flex items-center justify-between mb-2">
                         <h3 class="text-lg font-semibold text-gray-800">我的宝宝</h3>
-                        <button id="edit-baby-btn" class="text-blue-500 hover:text-blue-700 text-sm">编辑</button>
+                        <div class="flex items-center space-x-3">
+                            <button id="edit-baby-btn" class="text-blue-500 hover:text-blue-700 text-sm">编辑</button>
+                            <!-- Styled logout button: subtle outlined pill to match the UI -->
+                            <button id="logout-btn" title="退出登录" aria-label="退出登录" class="inline-flex items-center px-3 py-1 border border-red-200 text-red-600 bg-white hover:bg-red-50 rounded-full text-sm font-medium transition-colors">退出</button>
+                        </div>
                     </div>
                     <div id="baby-details" class="space-y-2">
                         <div class="flex justify-between">
@@ -208,6 +212,58 @@
             </div>
         </div>
     </div> <!-- #main-interface -->
+
+        <!-- 管理宝宝模态: 列表 + 设置默认 + 内嵌新建表单 -->
+        <div id="manage-babies-modal" class="hidden">
+            <div id="manage-babies-backdrop" class="modal-backdrop"></div>
+            <div class="fixed inset-0 z-50 flex items-start justify-center p-6 pt-20">
+                <div class="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold">管理宝宝</h2>
+                        <button id="close-manage-babies" class="text-gray-500 hover:text-gray-700">关闭</button>
+                    </div>
+
+                    <div id="manage-babies-list" class="space-y-3 max-h-64 overflow-auto mb-4">
+                        <!-- babies will be rendered here -->
+                        <p class="text-sm text-gray-500">正在加载宝宝列表…</p>
+                    </div>
+
+                    <div class="mb-4 border-t pt-4">
+                        <h3 class="text-sm font-medium text-gray-700 mb-2">新建宝宝</h3>
+                        <form id="manage-create-baby-form" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                            <div>
+                                <label class="block text-xs text-gray-600">姓名</label>
+                                <input id="manage-baby-name" required class="w-full px-3 py-2 border rounded-lg" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">出生日期</label>
+                                <input id="manage-baby-birthdate" type="date" required class="w-full px-3 py-2 border rounded-lg" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600">性别</label>
+                                <select id="manage-baby-gender" class="w-full px-3 py-2 border rounded-lg">
+                                    <option value="male">男</option>
+                                    <option value="female">女</option>
+                                    <option value="other">其他</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-3">
+                                <div class="flex space-x-2 mt-2">
+                                    <button type="submit" id="manage-create-baby-submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg">创建并选择</button>
+                                    <button type="button" id="manage-create-baby-cancel" class="bg-gray-100 px-4 py-2 rounded-lg">重置</button>
+                                </div>
+                                <div id="manage-create-message" class="text-sm text-red-500 mt-2 hidden"></div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="flex justify-end space-x-3">
+                        <button id="apply-default-baby" class="bg-green-600 text-white px-4 py-2 rounded-lg">应用默认</button>
+                        <button id="cancel-manage-babies" class="bg-gray-200 px-4 py-2 rounded-lg">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     <!-- 全局页面内通知（支持多条、队列、自动消失与手动关闭） -->
     <div id="global-notification" class="fixed top-6 right-6 z-50" style="pointer-events: none;"></div>
@@ -367,88 +423,83 @@
     // 模拟从后端获取用户婴儿信息
     // 配置后端API地址：使用 window.location.origin 保证从局域网设备访问时指向当前主机
     const API_BASE_URL = window.location.origin + '/api';
+        
+        // Attempt to get the user's default baby from server.
+        // Returns an object: { hasBaby: boolean, baby: object|null }
         async function getUserBabyInfo() {
             console.log("开始获取用户婴儿信息...");
 
-            // 从本地存储获取token
             const token = localStorage.getItem('authToken');
             if (!token) {
                 console.warn("未找到认证token");
-                return {
-                    hasBaby: false,
-                    baby: null
-                };
+                return { hasBaby: false, baby: null };
             }
 
-            
             try {
-                console.log("Bearer xxxxx");
-                console.log(`Bearer ${token}`);
-                console.log("发送获取婴儿信息请求...");
-                
-                const response = await fetch('/api/baby/', {
+                // Prefer server-stored default baby (if user set one)
+                const resDefault = await fetch(`${API_BASE_URL}/baby/default`, {
                     method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`  // 根据您的后端认证方式调整
-                    }
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
                 });
-
-                console.log("收到婴儿信息响应，状态码:", response.status);
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log("婴儿信息响应数据:", data);
-
-                    if (data.data.length > 0) {
-                        console.log("返回第一个婴儿数据:", data.data[0]);
-                        return {
-                            hasBaby: true,
-                            baby: data.data[0] // 假设只取第一个婴儿的信息
-                        };
-                    } else {
-                        return {
-                            hasBaby: false,
-                            baby: null
-                        };
-                    }
-                } else if (response.status === 401) {
-                    console.warn("认证失败，可能需要重新登录");
-                    return {
-                        hasBaby: false,
-                        baby: null
-                    };
-                } else {
-                    console.error("获取婴儿信息失败，服务器返回错误:", response.status);
-                    return {
-                        hasBaby: false,
-                        baby: null
-                    };
+                if (resDefault && resDefault.ok) {
+                    const j = await resDefault.json();
+                    const baby = j.data || j || null;
+                    if (baby) return { hasBaby: true, baby };
                 }
+
+                // Fallback: list babies and return the first one if present
+                const listRes = await fetch(`${API_BASE_URL}/baby/`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                });
+                if (listRes && listRes.ok) {
+                    const lj = await listRes.json();
+                    const arr = lj.data || lj || [];
+                    if (Array.isArray(arr) && arr.length > 0) return { hasBaby: true, baby: arr[0] };
+                }
+
+                return { hasBaby: false, baby: null };
             } catch (error) {
                 console.error("获取婴儿信息时发生错误:", error);
-                return {
-                    hasBaby: false,
-                    baby: null
-                };
+                return { hasBaby: false, baby: null };
             }
         }
 
-        // 页面加载时检查用户是否有婴儿
+        // 页面加载时检查用户是否有婴儿（服务器端的默认宝宝为权威来源）
         document.addEventListener('DOMContentLoaded', async function() {
             try {
+                const token = localStorage.getItem('authToken');
+                if (!token) { showCreateBabyModal(); return; }
+
+                // 优先询问服务器端的默认宝宝（服务器记录为权威）
+                try {
+                    const defRes = await fetch(`${API_BASE_URL}/baby/default`, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                    if (defRes && defRes.ok) {
+                        const dj = await defRes.json();
+                        const baby = dj.data || dj || null;
+                        if (baby) { showMainInterface(); updateBabyInfo(baby); return; }
+                    }
+                } catch (e) { console.warn('获取服务器默认宝宝失败，回退到本地或列表', e); }
+
+                // 如果服务器没有默认，回退到本地存储或列表第一个
+                const storedId = localStorage.getItem('currentBabyId');
+                if (storedId) {
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/baby/${storedId}`, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                        if (res && res.ok) { const bj = await res.json(); const baby = bj.data || bj || null; if (baby) { showMainInterface(); updateBabyInfo(baby); return; } }
+                    } catch (e) { console.warn('从本地currentBabyId加载失败', e); }
+                }
+
+                // 最后回退到列表中的第一个婴儿（如果有）
                 const babyInfo = await getUserBabyInfo();
                 if (babyInfo.hasBaby && babyInfo.baby) {
-                // if (babyInfo.hasBaby && babyInfo.baby) {
-                    // 用户有婴儿，显示主界面并更新婴儿信息
                     showMainInterface();
                     updateBabyInfo(babyInfo.baby);
                 } else {
-                    // 用户没有婴儿，显示创建婴儿界面
                     showCreateBabyModal();
                 }
             } catch (error) {
                 console.error('获取婴儿信息失败:', error);
-                // 默认显示创建婴儿界面
                 showCreateBabyModal();
             }
         });
@@ -542,6 +593,7 @@
 
         // 更新婴儿信息
         function updateBabyInfo(baby) {
+            console.log('updateBabyInfo called with baby ->', baby);
             document.getElementById('baby-name').textContent = baby.name || '未设置';
             document.getElementById('baby-gender').textContent = baby.gender === 'male' ? '男' : baby.gender === 'female' ? '女' : '未知';
             document.getElementById('baby-birthdate').textContent = baby.birth_date || '未设置';
@@ -563,7 +615,7 @@
                 document.getElementById('baby-age').textContent = '-';
             }
             // 更新统计信息与时间线（在一个统一入口进行刷新）
-            try { refreshUI(currentBabyId); } catch (e) { console.error('refresh UI error', e); }
+            try { refreshUI(); } catch (e) { console.error('refresh UI error', e); }
             // 尝试恢复任何正在进行中的计时（亲喂 / 睡眠）
             try { fetchAndResumeActiveTimers(currentBabyId); } catch (e) { console.error('resume timers error', e); }
         }
@@ -639,7 +691,7 @@
             if (saveText) saveText.textContent = '保存中...';
 
             try {
-                const response = await fetch('/api/baby/createBaby', {
+                const response = await fetch(`${API_BASE_URL}/baby/createBaby`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -651,11 +703,53 @@
                 if (response.ok) {
                     const data = await response.json();
                     console.log('创建婴儿成功:', data);
-
-                    // 更新婴儿信息并显示成功通知
-                    updateBabyInfo(data);
+                    const created = data.data || data;
+                    // persist as current baby and update UI
+                    if (created && created.id) {
+                        try { localStorage.setItem('currentBabyId', String(created.id)); } catch (e) {}
+                        // Make server store this baby as the authoritative default
+                        try {
+                            const setDef = await fetch(`${API_BASE_URL}/baby/${created.id}/set-default`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                            if (setDef && setDef.ok) {
+                                // Prefer to re-query the server default (authoritative) after setting it
+                                try {
+                                    const defQ = await fetch(`${API_BASE_URL}/baby/default`, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                                    if (defQ && defQ.ok) {
+                                        const dj = await defQ.json().catch(()=>({}));
+                                        const authoritative = (dj && dj.data) ? dj.data : created;
+                                        try { localStorage.setItem('currentBabyId', String(authoritative.id)); } catch(e) {}
+                                        showMainInterface();
+                                        updateBabyInfo(authoritative);
+                                        try { await refreshUI(); } catch (e) { console.warn('refresh after create failed', e); }
+                                    } else {
+                                        // fallback to created object
+                                        showMainInterface();
+                                        updateBabyInfo(created);
+                                        try { await refreshUI(); } catch (e) { console.warn('refresh after create failed', e); }
+                                    }
+                                } catch (e) {
+                                    console.warn('刷新服务器默认宝宝失败，使用创建返回值', e);
+                                    showMainInterface();
+                                    updateBabyInfo(created);
+                                    try { await refreshUI(); } catch (ee) { console.warn('refresh after create failed', ee); }
+                                }
+                            } else {
+                                // if set-default failed, still show created baby locally
+                                showMainInterface();
+                                updateBabyInfo(created);
+                                try { await refreshUI(); } catch (e) { console.warn('refresh after create failed', e); }
+                            }
+                        } catch (e) {
+                            console.warn('设置默认宝宝失败，继续使用本地创建结果', e);
+                            showMainInterface();
+                            updateBabyInfo(created);
+                            try { await refreshUI(); } catch (ee) { console.warn('refresh after create failed', ee); }
+                        }
+                    } else {
+                        // fallback: try to refresh list
+                        await fetchAndRenderBabies();
+                    }
                     showNotification('宝宝信息创建成功！', 'success', 2000);
-
                     // 关闭模态并重置按钮（稍作延迟以便用户看到消息）
                     setTimeout(() => {
                         hideCreateBabyModal();
@@ -785,7 +879,7 @@
                     document.getElementById('bottle-feed-modal').classList.add('hidden');
                     document.getElementById('bottle-feed-form').reset();
                     // 刷新统计信息与时间线
-                    try { refreshUI(currentBabyId); } catch(e){}
+                    try { refreshUI(); } catch(e){}
                 }, 600);
             } catch (err) {
                 console.error('瓶喂提交错误', err);
@@ -824,7 +918,7 @@
                 setTimeout(() => {
                     document.getElementById('diaper-modal').classList.add('hidden');
                     document.getElementById('diaper-form').reset();
-                    try { refreshUI(currentBabyId); } catch(e){}
+                    try { refreshUI(); } catch(e){}
                 }, 600);
             } catch (err) {
                 console.error('大小便提交错误', err);
@@ -834,17 +928,224 @@
 
         // 编辑婴儿信息：打开模态并尝试预填当前信息
         document.getElementById('edit-baby-btn').addEventListener('click', function() {
-            // 尝试读取当前显示的婴儿信息并填入表单
-            const name = document.getElementById('baby-name').textContent.trim();
-            const genderText = document.getElementById('baby-gender').textContent.trim();
-            const birth = document.getElementById('baby-birthdate').textContent.trim();
+            // 打开“管理宝宝”面板：列出所有宝宝并允许设置默认或创建新宝宝
+            openManageBabiesModal();
+        });
 
-            showCreateBabyModal();
-            // 填充表单（如果有值）
-            if (name && name !== '未设置') document.getElementById('baby-name-input').value = name;
-            if (genderText === '男') document.getElementById('baby-gender-select').value = 'boy';
-            if (genderText === '女') document.getElementById('baby-gender-select').value = 'girl';
-            if (birth && birth !== '未设置') document.getElementById('baby-birthdate-data').value = birth;
+        /* Manage Babies Modal: will be injected into DOM below. */
+
+        // 注销按钮：请求后端（可选）并在客户端清理本地 token 和状态，然后跳转到登录页面
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async function() {
+                const token = localStorage.getItem('authToken');
+                try {
+                    // Try to inform server (best-effort). Server simply acknowledges; client is authoritative for token deletion.
+                    await fetch(`${API_BASE_URL}/auth/logout`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                    }).catch(()=>{});
+                } catch(e) {
+                    // ignore network errors here
+                }
+
+                // Clear common localStorage keys used by the app
+                try {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentBabyId');
+                    localStorage.removeItem('currentUserId');
+                    // remove any active timers saved per-baby
+                    Object.keys(localStorage).forEach(k => {
+                        if (k.startsWith('active_direct_') || k.startsWith('active_sleep_')) localStorage.removeItem(k);
+                    });
+                } catch (e) { /* ignore */ }
+
+                showNotification('已退出登录', 'success', 1000);
+                // Redirect to server login page (renders login template)
+                setTimeout(() => { window.location.href = `${API_BASE_URL}/auth/loginPage`; }, 900);
+            });
+        }
+
+        // Manage babies modal logic
+        function openManageBabiesModal(){
+            document.getElementById('manage-babies-modal').classList.remove('hidden');
+            fetchAndRenderBabies();
+        }
+        function closeManageBabiesModal(){
+            document.getElementById('manage-babies-modal').classList.add('hidden');
+        }
+
+        document.getElementById('close-manage-babies').addEventListener('click', closeManageBabiesModal);
+        document.getElementById('cancel-manage-babies').addEventListener('click', closeManageBabiesModal);
+
+        async function fetchAndRenderBabies(){
+            const token = localStorage.getItem('authToken');
+            const container = document.getElementById('manage-babies-list');
+            container.innerHTML = '<p class="text-sm text-gray-500">正在加载宝宝列表…</p>';
+            try{
+                const res = await fetch(`${API_BASE_URL}/baby/`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) {
+                    container.innerHTML = '<p class="text-sm text-red-500">无法加载宝宝列表</p>';
+                    return;
+                }
+                const j = await res.json();
+                let babies = j.data || j || [];
+                if (!Array.isArray(babies)) babies = [];
+
+                // render list
+                if (babies.length === 0){
+                    container.innerHTML = '<p class="text-sm text-gray-500">尚无宝宝，您可以在下方创建一个。</p>';
+                    return;
+                }
+
+                // find currently selected/default
+                const currentDefault = localStorage.getItem('currentBabyId') ? parseInt(localStorage.getItem('currentBabyId')) : null;
+
+                let html = '<form id="manage-babies-list-form" class="space-y-2">';
+                for (const b of babies){
+                    const checked = (currentDefault && currentDefault === b.id) ? 'checked' : '';
+                    html += `
+                        <label class="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                                <div class="text-sm font-medium">${escapeHtml(b.name || '')}</div>
+                                <div class="text-xs text-gray-500">出生: ${escapeHtml(b.birth_date || '')} · 性别: ${escapeHtml(b.gender || '')}</div>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" name="default_baby" value="${b.id}" ${checked} class="h-4 w-4 text-green-600" />
+                            </div>
+                        </label>`;
+                }
+                html += '</form>';
+                container.innerHTML = html;
+
+                // If only one baby, ensure radio is selected (cannot be unchecked) — auto-select if none
+                if (babies.length === 1) {
+                    const anyChecked = container.querySelector('input[name="default_baby"]:checked');
+                    if (!anyChecked) {
+                        const first = container.querySelector('input[name="default_baby"]');
+                        if (first) first.checked = true;
+                    }
+                }
+            } catch(e){
+                console.error('fetchAndRenderBabies', e);
+                container.innerHTML = '<p class="text-sm text-red-500">加载宝宝时出错</p>';
+            }
+        }
+
+        // Create baby inside modal
+        document.getElementById('manage-create-baby-form').addEventListener('submit', async function(e){
+            e.preventDefault();
+            const name = document.getElementById('manage-baby-name').value.trim();
+            const birth = document.getElementById('manage-baby-birthdate').value;
+            const gender = document.getElementById('manage-baby-gender').value;
+            const msg = document.getElementById('manage-create-message');
+            msg.classList.add('hidden'); msg.textContent='';
+            if (!name || !birth){ msg.textContent='请填写姓名和出生日期'; msg.classList.remove('hidden'); return; }
+            const token = localStorage.getItem('authToken');
+            try{
+                const payload = { name, birth_date: birth, gender };
+                const res = await fetch(`${API_BASE_URL}/baby/createBaby`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload)
+                });
+                if (!res.ok){ const err = await res.json().catch(()=>({})); msg.textContent = err.message || '创建失败'; msg.classList.remove('hidden'); return; }
+                const j = await res.json();
+                // append and select the created baby
+                const created = j.data || j;
+                // refresh list and set selection to created
+                await fetchAndRenderBabies();
+                // set radio to created id
+                setTimeout(()=>{
+                    const r = document.querySelector("input[name='default_baby'][value='" + created.id + "']");
+                    if (r) r.checked = true;
+                }, 200);
+                // Persist and set server default so backend is authoritative
+                try { localStorage.setItem('currentBabyId', String(created.id)); } catch(e) {}
+                try {
+                    const setDef = await fetch(`${API_BASE_URL}/baby/${created.id}/set-default`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                    if (setDef && setDef.ok) {
+                        // Re-query server default to ensure authoritative state
+                        try {
+                            const defQ = await fetch(`${API_BASE_URL}/baby/default`, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                            if (defQ && defQ.ok) {
+                                const dj = await defQ.json().catch(()=>({}));
+                                const authoritative = (dj && dj.data) ? dj.data : created;
+                                try { localStorage.setItem('currentBabyId', String(authoritative.id)); } catch(e) {}
+                                showMainInterface();
+                                updateBabyInfo(authoritative);
+                                try { await refreshUI(); } catch(e) { console.warn('refresh after manage-create failed', e); }
+                            } else {
+                                showMainInterface();
+                                updateBabyInfo(created);
+                                try { await refreshUI(); } catch(e) { console.warn('refresh after manage-create failed', e); }
+                            }
+                        } catch (e) {
+                            console.warn('刷新服务器默认宝宝失败，使用创建返回值', e);
+                            showMainInterface();
+                            updateBabyInfo(created);
+                            try { await refreshUI(); } catch(e) { console.warn('refresh after manage-create failed', e); }
+                        }
+                    } else {
+                        showMainInterface();
+                        updateBabyInfo(created);
+                        try { await refreshUI(); } catch(e) { console.warn('refresh after manage-create failed', e); }
+                    }
+                } catch (e) {
+                    console.warn('设置默认宝宝失败，继续使用本地创建结果', e);
+                    showMainInterface();
+                    updateBabyInfo(created);
+                    try { await refreshUI(); } catch(e) { console.warn('refresh after manage-create failed', e); }
+                }
+                // clear form
+                document.getElementById('manage-create-baby-form').reset();
+                showNotification('创建成功，已切换到新宝宝', 'success');
+            } catch(e){ console.error('create baby in modal', e); msg.textContent='网络错误'; msg.classList.remove('hidden'); }
+        });
+
+        document.getElementById('manage-create-baby-cancel').addEventListener('click', function(){ document.getElementById('manage-create-baby-form').reset(); document.getElementById('manage-create-message').classList.add('hidden'); });
+
+        // Apply default baby selection
+        document.getElementById('apply-default-baby').addEventListener('click', async function(){
+            const form = document.getElementById('manage-babies-list-form');
+            if (!form){ showNotification('请先选择一个宝宝', 'error'); return; }
+            const selected = form.querySelector('input[name="default_baby"]:checked');
+            if (!selected){ showNotification('请先选择一个宝宝', 'error'); return; }
+            const babyId = selected.value;
+            const token = localStorage.getItem('authToken');
+            try{
+                const res = await fetch(`${API_BASE_URL}/baby/${babyId}/set-default`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok){ const err = await res.json().catch(()=>({})); showNotification(err.message || '设置默认失败', 'error'); return; }
+                const j = await res.json();
+                // persist new default locally
+                try { localStorage.setItem('currentBabyId', String(babyId)); } catch(e) {}
+                // ensure main interface visible
+                showMainInterface();
+                // fetch baby details to update header (use explicit Content-Type + Auth)
+                try {
+                    // Prefer authoritative server default after setting it
+                    const defQ = await fetch(`${API_BASE_URL}/baby/default`, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                    if (defQ && defQ.ok) {
+                        const bj = await defQ.json();
+                        const babyData = bj.data || bj || null;
+                        if (babyData) {
+                            try { localStorage.setItem('currentBabyId', String(babyData.id)); } catch(e) {}
+                            updateBabyInfo(babyData);
+                        }
+                    } else {
+                        // fallback to fetching by id
+                        const babyRes = await fetch(`${API_BASE_URL}/baby/${babyId}`, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                        if (babyRes && babyRes.ok) {
+                            const bj = await babyRes.json();
+                            const babyData = bj.data || bj || null;
+                            if (babyData) updateBabyInfo(babyData);
+                        }
+                    }
+                } catch (fe) {
+                    console.warn('获取设置后的宝宝信息失败，仍会刷新统计', fe);
+                }
+                showNotification('默认宝宝已更新', 'success');
+                closeManageBabiesModal();
+                try{ await refreshUI(); } catch(e){ console.warn('refreshUI after apply default failed', e); }
+            } catch(e){ console.error('apply default baby', e); showNotification('设置默认失败', 'error'); }
         });
 
         // 主按钮点击事件
@@ -899,7 +1200,7 @@
                 currentTimerMode = 'sleep';
                 openTimer3D(serverStartIso);
                 // Refresh UI so timeline shows the started sleep immediately
-                try { refreshUI(currentBabyId); } catch (e) { console.error('refresh after sleep start failed', e); }
+                try { refreshUI(); } catch (e) { console.error('refresh after sleep start failed', e); }
             } catch (e) {
                 console.error('startSleep error', e);
                 showNotification('开始睡眠请求失败', 'error');
@@ -959,7 +1260,7 @@
                 currentTimerMode = 'direct';
                 openTimer3D(serverStartIso);
                 // Refresh UI so timeline shows the started direct feeding immediately
-                try { refreshUI(currentBabyId); } catch (e) { console.error('refresh after direct start failed', e); }
+                try { refreshUI(); } catch (e) { console.error('refresh after direct start failed', e); }
             } catch (e) {
                 console.error('startDirectBreast error', e);
                 showNotification('开始亲喂请求失败', 'error');
@@ -991,7 +1292,7 @@
                 try { localStorage.removeItem(`active_direct_${currentBabyId}`); } catch (e) {}
                 showNotification('亲喂已结束并保存', 'success');
                 // 刷新统计与时间线
-                try { refreshUI(currentBabyId); } catch(e) { console.error('refresh UI after direct end failed', e); }
+                try { refreshUI(); } catch(e) { console.error('refresh UI after direct end failed', e); }
             } catch (e) {
                 console.error('stopDirectBreast error', e);
                 showNotification('结束亲喂请求失败', 'error');
@@ -1023,7 +1324,7 @@
                 currentSleepId = null;
                 try { localStorage.removeItem(`active_sleep_${currentBabyId}`); } catch (e) {}
                 // 更新页面统计与时间线
-                try { refreshUI(currentBabyId); } catch(e) { console.error('refresh UI after sleep end failed', e); }
+                try { refreshUI(); } catch(e) { console.error('refresh UI after sleep end failed', e); }
                 showNotification('睡眠已结束并保存', 'success');
             } catch (e) {
                 console.error('stopSleep error', e);
@@ -1070,8 +1371,38 @@
             }
         }
 
+        // Helper: resolve authoritative baby id (server default first, then localStorage)
+        async function resolveBabyId(preferredId){
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                try {
+                    const defRes = await fetch(`${API_BASE_URL}/baby/default`, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                    if (defRes && defRes.ok) {
+                        const dj = await defRes.json();
+                        const defBaby = dj.data || dj || null;
+                        if (defBaby && defBaby.id) {
+                            console.log('resolveBabyId: server default baby ->', defBaby.id, defBaby.name || '');
+                            return defBaby.id;
+                        }
+                    }
+                } catch (e) { console.warn('resolveBabyId: error fetching server default', e); /* ignore and fallback */ }
+            }
+            if (preferredId) {
+                console.log('resolveBabyId: using preferredId ->', preferredId);
+                return preferredId;
+            }
+            const stored = localStorage.getItem('currentBabyId');
+            console.log('resolveBabyId: fallback to local stored baby ->', stored);
+            if (stored) return parseInt(stored);
+            return null;
+        }
+
         // 今日时间线渲染与加载（可被 refreshUI 与其他操作调用）
         async function fetchAndRenderTimeline(babyId){
+            // resolve authoritative id if missing
+            if (!babyId) {
+                babyId = await resolveBabyId(null);
+            }
             if (!babyId) return;
             const token = localStorage.getItem('authToken');
             if (!token) return;
@@ -1211,6 +1542,9 @@
 
         // 刷新统计：剩余母乳量 & 今日喂养次数
         async function fetchAndUpdateStats(babyId) {
+            if (!babyId) {
+                babyId = await resolveBabyId(null);
+            }
             if (!babyId) return;
             const token = localStorage.getItem('authToken');
             try {
@@ -1286,10 +1620,17 @@
         }
 
         // 统一刷新界面（统计 + 周视图 + 今日时间线）
+        // 优先使用后端的默认宝宝作为权威来源；如果后端没有默认或请求失败，则回退到传入的 babyId 或本地缓存
         async function refreshUI(babyId){
-            if (!babyId) return;
+            // resolve authoritative id (server default first)
+            //if (!babyId) babyId = await resolveBabyId(babyId);
+            //使用后端传入的默认宝宝进行刷新
+            babyId = await resolveBabyId(babyId);
+            if (!babyId) {
+                console.warn('refreshUI: 无法解析 babyId，跳过刷新');
+                return;
+            }
             try {
-                // Update stats and weekly chart first, then timeline.
                 await fetchAndUpdateStats(babyId);
             } catch (e) {
                 console.error('refreshUI stats error', e);
@@ -1298,6 +1639,16 @@
                 await fetchAndRenderTimeline(babyId);
             } catch (e) {
                 console.error('refreshUI timeline error', e);
+            }
+            // Also refresh the "我的宝宝 / 管理宝宝" tab if it's open so the list reflects latest server state
+            try {
+                const manageModal = document.getElementById('manage-babies-modal');
+                if (manageModal && !manageModal.classList.contains('hidden')) {
+                    // re-fetch and re-render baby list inside the modal
+                    await fetchAndRenderBabies();
+                }
+            } catch (e) {
+                console.warn('refreshUI: failed to refresh manage-babies tab', e);
             }
         }
 

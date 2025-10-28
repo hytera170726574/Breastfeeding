@@ -226,6 +226,10 @@
                         console.log('保存用户信息');
                         localStorage.setItem('userInfo', JSON.stringify(data.user));
                     }
+                    // 如果后端在登录响应中返回了默认宝宝，先写入本地缓存，减少跳转后首次闪烁
+                    if (data.default_baby && data.default_baby.id) {
+                        try { localStorage.setItem('currentBabyId', String(data.default_baby.id)); } catch(e) {}
+                    }
 
                     showNotification('登录成功！正在跳转...', 'success', 1500);
                     // 延迟跳转，保持与之前行为一致
