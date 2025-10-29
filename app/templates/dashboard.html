@@ -1004,16 +1004,20 @@
                 let html = '<form id="manage-babies-list-form" class="space-y-2">';
                 for (const b of babies){
                     const checked = (currentDefault && currentDefault === b.id) ? 'checked' : '';
+                    // If only one baby, don't show delete button
+                    const single = babies.length === 1;
                     html += `
-                        <label class="flex items-center justify-between p-3 border rounded-lg">
+                        <div class="p-3 border rounded-lg flex items-center justify-between">
                             <div>
                                 <div class="text-sm font-medium">${escapeHtml(b.name || '')}</div>
                                 <div class="text-xs text-gray-500">出生: ${escapeHtml(b.birth_date || '')} · 性别: ${escapeHtml(b.gender || '')}</div>
                             </div>
-                            <div class="flex items-center">
+                            <div class="flex items-center space-x-3">
                                 <input type="radio" name="default_baby" value="${b.id}" ${checked} class="h-4 w-4 text-green-600" />
+                                <button type="button" class="baby-update-btn bg-yellow-100 hover:bg-yellow-200 text-sm text-yellow-800 px-3 py-1 rounded" data-baby-id="${b.id}">更新</button>
+                                ${ single ? '<button type="button" disabled class="bg-gray-100 text-sm text-gray-400 px-3 py-1 rounded">删除</button>' : `<button type="button" class="baby-delete-btn bg-red-100 hover:bg-red-200 text-sm text-red-800 px-3 py-1 rounded" data-baby-id="${b.id}">删除</button>` }
                             </div>
-                        </label>`;
+                        </div>`;
                 }
                 html += '</form>';
                 container.innerHTML = html;
@@ -1031,6 +1035,80 @@
                 container.innerHTML = '<p class="text-sm text-red-500">加载宝宝时出错</p>';
             }
         }
+
+        // Event delegation for update / delete buttons inside manage-babies-list
+        document.getElementById('manage-babies-list').addEventListener('click', async function(e){
+            const deleteBtn = e.target.closest('.baby-delete-btn');
+            const updateBtn = e.target.closest('.baby-update-btn');
+            const token = localStorage.getItem('authToken');
+
+            if (deleteBtn) {
+                const id = deleteBtn.getAttribute('data-baby-id');
+                if (!id) return;
+                // Confirmation
+                const ok = window.confirm('删除宝宝将同时移除该宝宝的所有记录（喂养、睡眠、大小便、体重等）。此操作不可恢复，是否继续？');
+                if (!ok) return;
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}/baby/${id}/purge`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                    if (!res.ok) {
+                        const err = await res.json().catch(()=>({}));
+                        showNotification(err.message || '删除失败', 'error');
+                        return;
+                    }
+                    showNotification('已删除宝宝及其所有数据', 'success');
+                    // refresh list and UI
+                    await fetchAndRenderBabies();
+                    try { await refreshUI(); } catch(e) { console.warn('refresh after purge failed', e); }
+                } catch (err) {
+                    console.error('purge error', err);
+                    showNotification('网络错误，删除失败', 'error');
+                }
+                return;
+            }
+
+            if (updateBtn) {
+                const id = updateBtn.getAttribute('data-baby-id');
+                if (!id) return;
+                // Simple inline edit: prompt for new values (small UX, but effective)
+                try {
+                    const currentName = updateBtn.closest('div').querySelector('.text-sm') ? updateBtn.closest('div').querySelector('.text-sm').textContent.trim() : '';
+                    const newName = window.prompt('编辑宝宝姓名:', currentName);
+                    if (newName === null) return; // cancelled
+                    const newBirth = window.prompt('编辑出生日期 (YYYY-MM-DD):', '');
+                    if (newBirth === null) return;
+                    const newGender = window.prompt('编辑性别 (male|female|other):', '');
+                    if (newGender === null) return;
+
+                    const payload = { name: newName.trim(), birth_date: newBirth.trim(), gender: newGender.trim() };
+                    const res = await fetch(`${API_BASE_URL}/baby/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+                    if (!res.ok) {
+                        const err = await res.json().catch(()=>({}));
+                        showNotification(err.message || '更新失败', 'error');
+                        return;
+                    }
+                    showNotification('宝宝信息已更新', 'success');
+                    await fetchAndRenderBabies();
+                    // If updated baby is current default, refresh header
+                    const stored = localStorage.getItem('currentBabyId');
+                    if (stored && parseInt(stored) === parseInt(id)) {
+                        try {
+                            // re-fetch authoritative baby and update header
+                            const defQ = await fetch(`${API_BASE_URL}/baby/default`, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } });
+                            if (defQ && defQ.ok) {
+                                const bj = await defQ.json();
+                                const babyData = bj.data || bj || null;
+                                if (babyData) updateBabyInfo(babyData);
+                            }
+                        } catch (e) { /* ignore */ }
+                    }
+                } catch (e) {
+                    console.error('update baby error', e);
+                    showNotification('网络错误，更新失败', 'error');
+                }
+                return;
+            }
+        });
 
         // Create baby inside modal
         document.getElementById('manage-create-baby-form').addEventListener('submit', async function(e){

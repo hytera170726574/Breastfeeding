@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app import db
-from app.models.models import Baby
+from app.models.models import Baby, Feeding, Diaper, Sleep, Measurement, MilkInventory, MilkPump, DirectBreastfeeding, BottleBreastFeeding, FormulaFeeding
 from app.schemas.schemas import BabyCreate, BabyUpdate, BabyResponse
 from app.utils.helpers import get_current_user, success_response, error_response
 from flask_jwt_extended import jwt_required
@@ -163,6 +163,62 @@ def delete_baby(baby_id):
     except Exception as e:
         db.session.rollback()
         return error_response(f'删除婴儿信息失败: {str(e)}')
+
+
+@baby_bp.route('/<int:baby_id>/purge', methods=['DELETE'])
+@jwt_required()
+def purge_baby_and_all_data(baby_id):
+    """彻底删除指定婴儿及其所有关联数据（喂养、大小便、睡眠、测量、库存等）。
+
+    规则：
+    - 如果这是该用户的最后一个宝宝，不允许删除。
+    - 如果删除的是默认宝宝，自动选择该用户的另一个宝宝作为新的默认（如果存在）。
+    - 返回删除结果或错误信息。
+    """
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        # 验证婴儿是否存在且属于当前用户
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('婴儿信息不存在或无权限访问', 404)
+
+        # 检查该用户还有多少个宝宝
+        total = Baby.query.filter_by(user_id=current_user.id).count()
+        if total <= 1:
+            return error_response('无法删除：这是您账户中的最后一个宝宝', 400)
+
+        # 如果要删除的是默认宝宝，先选择另一个宝宝作为默认
+        if current_user.default_baby_id == baby_id:
+            other = Baby.query.filter(Baby.user_id == current_user.id, Baby.id != baby_id).first()
+            if other:
+                current_user.default_baby_id = other.id
+            else:
+                current_user.default_baby_id = None
+
+        # 删除关联数据（逐表删除以避免外键约束问题）
+        Feeding.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+        Diaper.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+        Sleep.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+        Measurement.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+        MilkInventory.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+        MilkPump.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+        DirectBreastfeeding.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+        BottleBreastFeeding.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+        FormulaFeeding.query.filter_by(baby_id=baby_id).delete(synchronize_session=False)
+
+        # 最后删除 Baby 记录
+        db.session.delete(baby)
+        db.session.commit()
+
+        logger.info(f"用户 {current_user.id} 已删除婴儿 {baby_id} 及其关联数据")
+        return success_response('婴儿及其所有数据已删除', status_code=200)
+
+    except Exception as e:
+        db.session.rollback()
+        return error_response(f'删除婴儿及其数据失败: {str(e)}')
 
 @baby_bp.route('/<int:baby_id>/set-default', methods=['POST'])
 @jwt_required()
