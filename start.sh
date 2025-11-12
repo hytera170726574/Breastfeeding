@@ -28,4 +28,4 @@ export FLASK_ENV=development
 
 # 启动应用
 echo "启动Flask应用..."
-flask run --host=0.0.0.0 --port=5000
+flask run --host=0.0.0.0 --port=9001

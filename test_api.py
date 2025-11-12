@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timedelta
 
 # API基础URL
-BASE_URL = "http://localhost:5000/api"
+BASE_URL = "http://localhost:9001/api"
 
 def test_api():
     print("开始测试API...")

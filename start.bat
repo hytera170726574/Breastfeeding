@@ -15,6 +15,6 @@ set FLASK_APP=run.py
 set FLASK_ENV=development
 
 echo 启动Flask应用...
-flask run --host=0.0.0.0 --port=5000
+flask run --host=0.0.0.0 --port=9001
 
 pause

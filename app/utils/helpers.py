@@ -39,7 +39,8 @@ def error_response(message, status_code=400):
 
 def success_response(message, data=None, status_code=200):
     """标准化成功响应"""
-    response = {'message': message}
-    if data:
-        response['data'] = data
+    response = {
+        'message': message,
+        'data': data,
+    }
     return jsonify(response), status_code

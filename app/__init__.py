@@ -1,5 +1,5 @@
-from flask import Flask
 import os
+from flask import Flask, send_from_directory, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -36,6 +36,23 @@ def create_app(config_class=Config):
     app.register_blueprint(sleep_bp, url_prefix='/api/sleep')
     app.register_blueprint(measurement_bp, url_prefix='/api/measurement')
     app.register_blueprint(stats_bp, url_prefix='/api/stats')
+
+    # 在生产环境中使用打包后的前端资源 (frontend/dist)
+    frontend_dist = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
+
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve_frontend(path: str):
+        """为除 /api/* 以外的请求提供前端构建产物。"""
+        if path.startswith('api/'):
+            abort(404)
+
+        if os.path.isdir(frontend_dist):
+            candidate = os.path.join(frontend_dist, path)
+            if path and os.path.exists(candidate) and os.path.isfile(candidate):
+                return send_from_directory(frontend_dist, path)
+            return send_from_directory(frontend_dist, 'index.html')
+        abort(404)
 
     # 创建表
     with app.app_context():
