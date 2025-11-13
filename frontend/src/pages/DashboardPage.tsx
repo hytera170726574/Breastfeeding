@@ -10,6 +10,7 @@ import TimelineCard from '../components/dashboard/TimelineCard';
 import TimerModal from '../components/dashboard/TimerModal';
 import Toast from '../components/dashboard/Toast';
 import WeeklyChartCard from '../components/dashboard/WeeklyChartCard';
+import MeasurementModal from '../components/dashboard/MeasurementModal';
 import { useDashboard } from '../hooks/useDashboard';
 
 const DashboardPage = () => {
@@ -113,8 +114,15 @@ const DashboardPage = () => {
                 }
                 openModal('diaper', anchor);
               }}
+              onOpenMeasurement={(anchor: number) => {
+                if (!state.baby) {
+                  openModal('createBaby', anchor);
+                  return;
+                }
+                openModal('measurement', anchor);
+              }}
             />
-            <StatsSummaryGrid stats={state.dailyStats} />
+            <StatsSummaryGrid stats={state.dailyStats} latestMeasurement={state.latestMeasurement} />
           </main>
         </div>
 
@@ -166,6 +174,13 @@ const DashboardPage = () => {
           anchorY={modalAnchor}
           onClose={() => closeModal('diaper')}
           onSubmit={actions.submitDiaper}
+        />
+
+        <MeasurementModal
+          open={modals.measurement}
+          anchorY={modalAnchor}
+          onClose={() => closeModal('measurement')}
+          onSubmit={actions.submitMeasurement}
         />
 
         <TimerModal timer={state.timer} anchorY={timerAnchor} onStop={handleStopTimer} />

@@ -5,6 +5,7 @@ import {
   type Baby,
   type DashboardState,
   type DailyStats,
+  type Measurement,
   type TimelineEvent,
   type TimerState,
   type WeeklyStatsDataset,
@@ -30,8 +31,9 @@ import {
 import { recordDiaper } from '../services/diaper';
 import { fetchDailyStats, fetchWeeklyStats } from '../services/stats';
 import { fetchTodayTimeline } from '../services/timeline';
+import { createMeasurement, fetchMeasurements } from '../services/measurement';
 
-type ModalKey = 'createBaby' | 'manageBabies' | 'bottleFeed' | 'diaper';
+type ModalKey = 'createBaby' | 'manageBabies' | 'bottleFeed' | 'diaper' | 'measurement';
 
 interface Toast {
   type: 'success' | 'error' | 'info';
@@ -62,6 +64,13 @@ interface DiaperFormValues {
   notes?: string;
 }
 
+interface MeasurementFormValues {
+  heightCm?: number;
+  weightKg?: number;
+  measurementDate: string;
+  notes?: string;
+}
+
 interface UseDashboardResult {
   state: DashboardState;
   modals: Record<ModalKey, boolean>;
@@ -80,6 +89,7 @@ interface UseDashboardResult {
     stopSleep: () => Promise<void>;
     submitBottle: (values: BottleFormValues) => Promise<void>;
     submitDiaper: (values: DiaperFormValues) => Promise<void>;
+  submitMeasurement: (values: MeasurementFormValues) => Promise<void>;
     createBaby: (values: CreateBabyValues) => Promise<void>;
     updateBaby: (values: UpdateBabyValues) => Promise<void>;
     deleteBaby: (babyId: number) => Promise<void>;
@@ -94,6 +104,7 @@ const defaultState: DashboardState = {
   timeline: [],
   weeklyStats: null,
   timer: null,
+  latestMeasurement: null,
 };
 
 function storeActiveTimerKey(mode: TimerState['mode'], babyId: number) {
@@ -146,6 +157,7 @@ export function useDashboard(): UseDashboardResult {
     manageBabies: false,
     bottleFeed: false,
     diaper: false,
+    measurement: false,
   });
   const [babyList, setBabyList] = useState<Baby[]>([]);
   const [toast, setToast] = useState<Toast | null>(null);
@@ -182,7 +194,7 @@ export function useDashboard(): UseDashboardResult {
       localStorage.setItem('currentBabyId', String(baby.id));
 
       try {
-        const [daily, timeline, weekly, babies, activeDirect, activeSleep] =
+        const [daily, timeline, weekly, babies, activeDirect, activeSleep, measurements] =
           (await Promise.all([
             fetchDailyStats(baby.id),
             fetchTodayTimeline(baby.id),
@@ -190,16 +202,19 @@ export function useDashboard(): UseDashboardResult {
             listBabies(),
             fetchActiveDirect(baby.id).catch(() => null),
             fetchActiveSleep(baby.id).catch(() => null),
+            fetchMeasurements(baby.id).catch(() => [] as Measurement[]),
           ])) as [
             DailyStats,
             TimelineEvent[],
             WeeklyStatsDataset,
             Baby[],
             TimerState | null,
-            TimerState | null
+            TimerState | null,
+            Measurement[]
           ];
 
         const timer = activeDirect ?? activeSleep ?? restoreActiveTimer(baby.id);
+        const latestMeasurement = measurements[0] ?? null;
 
         if (babies.length) {
           setBabyList(babies);
@@ -218,6 +233,7 @@ export function useDashboard(): UseDashboardResult {
           timeline,
           weeklyStats: weekly,
           timer,
+          latestMeasurement,
         });
       } catch (error) {
         console.error('加载仪表盘数据失败', error);
@@ -407,6 +423,36 @@ export function useDashboard(): UseDashboardResult {
     [closeModal, openModal, refresh, showToast, state.baby]
   );
 
+  const submitMeasurement = useCallback(
+    async (values: MeasurementFormValues) => {
+      if (!state.baby) {
+        openModal('createBaby');
+        showToast('请先创建宝宝信息', 'info');
+        return;
+      }
+      if (values.heightCm == null && values.weightKg == null) {
+        showToast('请至少填写身高或体重其中一项', 'error');
+        return;
+      }
+      try {
+        await createMeasurement({
+          baby_id: state.baby.id,
+          height_cm: values.heightCm,
+          weight_kg: values.weightKg,
+          measurement_date: values.measurementDate,
+          notes: values.notes,
+        });
+        closeModal('measurement');
+        showToast('身高体重记录已保存', 'success');
+        await refresh();
+      } catch (error) {
+        console.error('记录身高体重失败', error);
+        showToast(error instanceof Error ? error.message : '记录身高体重失败', 'error');
+      }
+    },
+    [closeModal, openModal, refresh, showToast, state.baby]
+  );
+
   const createBabyAction = useCallback(
     async (values: CreateBabyValues) => {
       try {
@@ -505,6 +551,7 @@ export function useDashboard(): UseDashboardResult {
       stopSleep: stopSleepAction,
       submitBottle,
       submitDiaper,
+      submitMeasurement,
       createBaby: createBabyAction,
       updateBaby: updateBabyAction,
       deleteBaby: deleteBabyAction,
@@ -520,6 +567,7 @@ export function useDashboard(): UseDashboardResult {
       stopSleepAction,
       submitBottle,
       submitDiaper,
+      submitMeasurement,
       updateBabyAction,
     ]
   );

@@ -15,6 +15,14 @@ export interface DailyStats {
   remainingMilk: number;
 }
 
+export interface Measurement {
+  id: number;
+  weightKg: number | null;
+  heightCm: number | null;
+  measurementDate: string;
+  notes?: string | null;
+}
+
 export interface TimelineEvent {
   id?: number | string;
   type:
@@ -55,6 +63,7 @@ export interface DashboardState {
   timeline: TimelineEvent[];
   weeklyStats: WeeklyStatsDataset | null;
   timer: TimerState | null;
+  latestMeasurement: Measurement | null;
 }
 
 export const emptyDailyStats: DailyStats = {

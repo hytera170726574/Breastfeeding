@@ -1,7 +1,8 @@
-import type { DailyStats } from '../../types/dashboard';
+import type { DailyStats, Measurement } from '../../types/dashboard';
 
 interface StatsSummaryGridProps {
   stats: DailyStats;
+  latestMeasurement?: Measurement | null;
 }
 
 const items = [
@@ -31,15 +32,30 @@ const items = [
   },
 ];
 
-export function StatsSummaryGrid({ stats }: StatsSummaryGridProps) {
+export function StatsSummaryGrid({ stats, latestMeasurement }: StatsSummaryGridProps) {
+  const heightValue = latestMeasurement?.heightCm != null ? `${latestMeasurement.heightCm}` : '--';
+  const weightValue = latestMeasurement?.weightKg != null ? `${latestMeasurement.weightKg}` : '--';
+  const measurementDate = latestMeasurement?.measurementDate
+    ? new Date(latestMeasurement.measurementDate)
+    : null;
+  const measurementDateLabel = measurementDate
+    ? new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(measurementDate)
+    : null;
+  const measurementTooltip = measurementDateLabel ? `记录日期：${measurementDateLabel}` : '暂无记录';
+
   return (
-    <section className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+    <section className="mt-8 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {items.map((item) => (
         <article key={item.key} className="bg-white rounded-xl p-4 shadow text-center">
           <p className="text-gray-600 text-sm">{item.label}</p>
           <p className={`text-2xl font-bold ${item.color}`}>{item.format(stats[item.key])}</p>
         </article>
       ))}
+      <article className="bg-white rounded-xl p-4 shadow text-center" title={measurementTooltip} aria-label={measurementTooltip} role="note">
+        <p className="text-gray-600 text-sm">身高体重</p>
+        <p className="mt-3 text-lg font-semibold text-rose-500">{`${heightValue} / ${weightValue}`}</p>
+        <p className="mt-1 text-[11px] text-gray-400">{measurementDateLabel ? `${measurementDateLabel}` : '尚未记录'}</p>
+      </article>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request
 from app import db
 from app.models.models import Measurement
 from app.schemas.schemas import MeasurementCreate, MeasurementUpdate, MeasurementResponse
@@ -19,6 +19,9 @@ def create_measurement():
         # 验证输入数据
         measurement_data = MeasurementCreate(**request.json)
 
+        if measurement_data.height_cm is None and measurement_data.weight_kg is None:
+            return error_response('请至少填写身高或体重其中一项', 400)
+
         # 验证婴儿权限
         from app.models.models import Baby
         baby = Baby.query.filter_by(id=measurement_data.baby_id, user_id=current_user.id).first()
@@ -32,7 +35,16 @@ def create_measurement():
         ).first()
 
         if existing_measurement:
-            return error_response('该日期已存在测量记录，请使用更新功能', 400)
+            if measurement_data.weight_kg is not None:
+                existing_measurement.weight_kg = measurement_data.weight_kg
+            if measurement_data.height_cm is not None:
+                existing_measurement.height_cm = measurement_data.height_cm
+            if measurement_data.notes is not None:
+                existing_measurement.notes = measurement_data.notes
+
+            db.session.commit()
+
+            return success_response('该日期已存在记录，已为您更新最新数据', MeasurementResponse.from_orm(existing_measurement).dict())
 
         # 创建体重身长记录
         measurement = Measurement(
@@ -46,7 +58,7 @@ def create_measurement():
         db.session.add(measurement)
         db.session.commit()
 
-        return success_response('测量记录创建成功', MeasurementResponse.from_orm(measurement)), 201
+        return success_response('测量记录创建成功', MeasurementResponse.from_orm(measurement).dict(), 201)
 
     except Exception as e:
         db.session.rollback()
@@ -91,9 +103,9 @@ def get_measurements(baby_id):
 
         # 执行查询
         measurements = query.all()
-        measurements_data = [MeasurementResponse.from_orm(measurement) for measurement in measurements]
+        measurements_data = [MeasurementResponse.from_orm(measurement).dict() for measurement in measurements]
 
-        return success_response('获取测量记录成功', measurements_data), 200
+        return success_response('获取测量记录成功', measurements_data)
 
     except Exception as e:
         return error_response(f'获取测量记录失败: {str(e)}')
@@ -141,9 +153,9 @@ def get_measurements_for_default_baby():
 
         # 执行查询
         measurements = query.all()
-        measurements_data = [MeasurementResponse.from_orm(measurement) for measurement in measurements]
+        measurements_data = [MeasurementResponse.from_orm(measurement).dict() for measurement in measurements]
 
-        return success_response('获取测量记录成功', measurements_data), 200
+        return success_response('获取测量记录成功', measurements_data)
 
     except Exception as e:
         return error_response(f'获取测量记录失败: {str(e)}')
@@ -182,7 +194,7 @@ def update_measurement(measurement_id):
 
         db.session.commit()
 
-        return success_response('测量记录更新成功', MeasurementResponse.from_orm(measurement)), 200
+        return success_response('测量记录更新成功', MeasurementResponse.from_orm(measurement).dict())
 
     except Exception as e:
         db.session.rollback()
@@ -211,7 +223,7 @@ def delete_measurement(measurement_id):
         db.session.delete(measurement)
         db.session.commit()
 
-        return success_response('测量记录删除成功'), 200
+        return success_response('测量记录删除成功')
 
     except Exception as e:
         db.session.rollback()

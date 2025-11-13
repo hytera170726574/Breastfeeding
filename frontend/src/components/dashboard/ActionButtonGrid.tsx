@@ -3,6 +3,7 @@ interface ActionButtonGridProps {
   onStartSleep: (anchor: number) => void;
   onOpenBottle: (anchor: number) => void;
   onOpenDiaper: (anchor: number) => void;
+  onOpenMeasurement: (anchor: number) => void;
 }
 
 const buttons = [
@@ -50,6 +51,17 @@ const buttons = [
       </svg>
     ),
   },
+  {
+    id: 'measurement',
+    label: '身高体重',
+    color: 'bg-pink-500 hover:bg-pink-600',
+    onClickKey: 'onOpenMeasurement' as const,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18m9-9H3" />
+      </svg>
+    ),
+  },
 ];
 
 export function ActionButtonGrid(props: ActionButtonGridProps) {
@@ -58,11 +70,12 @@ export function ActionButtonGrid(props: ActionButtonGridProps) {
     onStartSleep: props.onStartSleep,
     onOpenBottle: props.onOpenBottle,
     onOpenDiaper: props.onOpenDiaper,
+    onOpenMeasurement: props.onOpenMeasurement,
   };
 
   return (
     <section className="w-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
         {buttons.map((item) => (
           <button
             key={item.id}
