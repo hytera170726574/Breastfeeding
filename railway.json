@@ -1,0 +1,9 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": [
+    "npm install --prefix frontend",
+    "npm run build --prefix frontend",
+    "pip install -r requirements.txt"
+  ],
+  "deploy": "gunicorn run:app"
+}
