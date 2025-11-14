@@ -27,6 +27,9 @@ def create_app(config_class=Config):
     from app.utils.errors import register_error_handlers
     register_error_handlers(app)
 
+    # 确保模型被加载以便 SQLAlchemy 元数据就绪（尤其用于迁移自动生成）
+    from app.models import models  # noqa: F401
+
     # 注册蓝图
     from app.routes import auth_bp, baby_bp, feeding_bp, diaper_bp, sleep_bp, measurement_bp, stats_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')

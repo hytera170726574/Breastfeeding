@@ -17,7 +17,7 @@
 - Flask
 - SQLAlchemy (ORM)
 - JWT (认证)
-- SQLite (默认数据库)
+- PostgreSQL (默认数据库)
 
 ## 安装步骤
 
@@ -40,13 +40,19 @@
    pip install -r requirements.txt
    ```
 
-4. 设置环境变量（可选）：
+4. 配置数据库连接：
+   - 确保本地已安装 PostgreSQL，并创建数据库（默认配置假定数据库名为 `breastfeeding`，用户为 `postgres`，密码为 `postgres`）。
+   - 设置 `DATABASE_URL` 环境变量，或在 `.env` 文件中声明，例如：
+     ```
+     export DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/breastfeeding
+     ```
+
+5. 初始化数据库结构：
    ```
-   cp .env.example .env
-   # 编辑 .env 文件中的配置
+   flask db upgrade
    ```
 
-5. 运行应用：
+6. 运行应用：
    ```
    python run.py
    ```
@@ -169,7 +175,12 @@
 ```
 python test_api.py
 ```
+## 下一步的产品计划
 
+- [ ] 计划接入ai在首页展示ai分析的睡眠数据，喂养数据，和相关建议；
+- [ ] 在记录大便页面新增上传图片功能，通过ai协助用户分析大便是否健康；
+- [ ] 切换psgresql数据库；
+- [ ] 准备使用railway进行上线部署
 ## 许可证
 
 MIT License
