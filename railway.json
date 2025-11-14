@@ -4,6 +4,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "gunicorn run:app"
+    "startCommand": "/app/.venv/bin/gunicorn run:app"
   }
 }
