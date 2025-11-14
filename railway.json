@@ -1,14 +1,9 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "commands": [
-      "npm install --prefix frontend",
-      "npm run build --prefix frontend",
-      "python -m pip install --upgrade pip",
-      "python -m pip install -r requirements.txt"
-    ]
+    "buildCommand": "npm install --prefix frontend && npm run build --prefix frontend && python -m pip install --upgrade pip && python -m pip install -r requirements.txt"
   },
   "deploy": {
-    "command": "gunicorn run:app"
+    "startCommand": "gunicorn run:app"
   }
 }
