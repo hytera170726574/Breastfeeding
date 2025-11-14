@@ -1,9 +1,10 @@
 import logging
 import os
 
+from sqlalchemy import inspect
 from dotenv import load_dotenv
 
-from app import create_app
+from app import create_app, db
 
 
 load_dotenv()
@@ -25,6 +26,16 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     # Ensure JSON responses use unicode characters
     app.config["JSON_AS_ASCII"] = False
+
+    # Auto-initialize tables when running the dev server directly
+    with app.app_context():
+        inspector = inspect(db.engine)
+        existing_tables = inspector.get_table_names()
+        if not existing_tables:
+            logger.info("No database tables detected; creating schema via create_all().")
+            db.create_all()
+        else:
+            logger.info("Detected %s tables; skipping create_all().", len(existing_tables))
 
     # Host/port can be configured via environment variables for flexibility
     host ="0.0.0.0"#os.environ.get('HOST', os.environ.get('FLASK_RUN_HOST', '0.0.0.0'))

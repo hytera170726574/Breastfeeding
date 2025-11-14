@@ -1,5 +1,6 @@
 import os
 from flask import Flask, send_from_directory, abort
+from werkzeug.exceptions import NotFound
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -50,12 +51,16 @@ def create_app(config_class=Config):
         if path.startswith('api/'):
             abort(404)
 
-        if os.path.isdir(frontend_dist):
-            candidate = os.path.join(frontend_dist, path)
-            if path and os.path.exists(candidate) and os.path.isfile(candidate):
+        if not os.path.isdir(frontend_dist):
+            abort(404)
+
+        if path:
+            try:
                 return send_from_directory(frontend_dist, path)
-            return send_from_directory(frontend_dist, 'index.html')
-        abort(404)
+            except NotFound:
+                pass
+
+        return send_from_directory(frontend_dist, 'index.html')
 
     # 创建表
     with app.app_context():
