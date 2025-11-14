@@ -4,7 +4,7 @@
     "commands": [
       "npm install --prefix frontend",
       "npm run build --prefix frontend",
-      "pip install -r requirements.txt"
+      "pip3 install -r requirements.txt"
     ]
   },
   "deploy": {
