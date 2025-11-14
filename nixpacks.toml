@@ -1,5 +1,8 @@
 providers = ["python", "node"]
 
+[variables]
+NODE_VERSION = "20.19.0"
+
 [phases.install]
 cmds = [
 	"python -m venv /app/.venv",
