@@ -26,10 +26,20 @@ from app.schemas.schemas import (
 )
 from app.utils.helpers import get_current_user, success_response, error_response, parse_iso_datetime
 from flask_jwt_extended import jwt_required
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import text
 
 feeding_bp = Blueprint('feeding_bp', __name__)
+
+
+def _as_utc_iso(dt):
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    return dt.isoformat().replace('+00:00', 'Z')
 
 @feeding_bp.route('/', methods=['POST'])
 @jwt_required()
@@ -765,11 +775,11 @@ def list_pumps(baby_id):
         for r in recs:
             data.append({
                 'id': r.id,
-                'start_time': r.start_time.isoformat() if r.start_time else None,
-                'end_time': r.end_time.isoformat() if r.end_time else None,
+                'start_time': _as_utc_iso(r.start_time),
+                'end_time': _as_utc_iso(r.end_time),
                 'volume_ml': r.volume_ml,
                 'notes': r.notes,
-                'created_at': r.created_at.isoformat() if r.created_at else None
+                'created_at': _as_utc_iso(r.created_at)
             })
 
         return success_response('获取泵奶记录成功', data, 200)
