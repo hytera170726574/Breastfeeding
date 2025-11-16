@@ -37,6 +37,18 @@ export async function fetchMeasurements(babyId: number): Promise<Measurement[]> 
   return (list ?? []).map(transformMeasurement);
 }
 
+export async function fetchLatestMeasurement(babyId: number): Promise<Measurement | null> {
+  const res = await apiFetch<MeasurementResponseRaw | null>(`/measurement/${babyId}/latest`, {
+    method: 'GET',
+  });
+
+  if (!res) {
+    return null;
+  }
+
+  return transformMeasurement(res);
+}
+
 export async function createMeasurement(payload: MeasurementCreatePayload): Promise<Measurement> {
   const res = await apiFetch<{ data?: MeasurementResponseRaw } | MeasurementResponseRaw>(`/measurement/`, {
     method: 'POST',

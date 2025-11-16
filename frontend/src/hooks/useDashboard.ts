@@ -31,7 +31,7 @@ import {
 import { recordDiaper } from '../services/diaper';
 import { fetchDailyStats, fetchWeeklyStats } from '../services/stats';
 import { fetchTodayTimeline } from '../services/timeline';
-import { createMeasurement, fetchMeasurements } from '../services/measurement';
+import { createMeasurement, fetchLatestMeasurement } from '../services/measurement';
 
 type ModalKey = 'createBaby' | 'manageBabies' | 'bottleFeed' | 'diaper' | 'measurement';
 
@@ -194,7 +194,7 @@ export function useDashboard(): UseDashboardResult {
       localStorage.setItem('currentBabyId', String(baby.id));
 
       try {
-        const [daily, timeline, weekly, babies, activeDirect, activeSleep, measurements] =
+        const [daily, timeline, weekly, babies, activeDirect, activeSleep, latestMeasurementRaw] =
           (await Promise.all([
             fetchDailyStats(baby.id),
             fetchTodayTimeline(baby.id),
@@ -202,7 +202,7 @@ export function useDashboard(): UseDashboardResult {
             listBabies(),
             fetchActiveDirect(baby.id).catch(() => null),
             fetchActiveSleep(baby.id).catch(() => null),
-            fetchMeasurements(baby.id).catch(() => [] as Measurement[]),
+            fetchLatestMeasurement(baby.id).catch(() => null as Measurement | null),
           ])) as [
             DailyStats,
             TimelineEvent[],
@@ -210,11 +210,11 @@ export function useDashboard(): UseDashboardResult {
             Baby[],
             TimerState | null,
             TimerState | null,
-            Measurement[]
+            Measurement | null
           ];
 
         const timer = activeDirect ?? activeSleep ?? restoreActiveTimer(baby.id);
-        const latestMeasurement = measurements[0] ?? null;
+        const latestMeasurement = latestMeasurementRaw ?? null;
 
         if (babies.length) {
           setBabyList(babies);

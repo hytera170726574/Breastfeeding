@@ -110,6 +110,33 @@ def get_measurements(baby_id):
     except Exception as e:
         return error_response(f'获取测量记录失败: {str(e)}')
 
+
+@measurement_bp.route('/<int:baby_id>/latest', methods=['GET'])
+@jwt_required()
+def get_latest_measurement(baby_id):
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return error_response('用户未登录', 401)
+
+        from app.models.models import Baby
+        baby = Baby.query.filter_by(id=baby_id, user_id=current_user.id).first()
+        if not baby:
+            return error_response('无权限访问该婴儿记录', 403)
+
+        measurement = Measurement.query.filter_by(baby_id=baby_id).order_by(
+            Measurement.measurement_date.desc(),
+            Measurement.id.desc()
+        ).first()
+
+        if not measurement:
+            return success_response('暂无测量记录', None, 200)
+
+        payload = MeasurementResponse.from_orm(measurement).dict()
+        return success_response('获取最新测量记录成功', payload, 200)
+    except Exception as e:
+        return error_response(f'获取最新测量记录失败: {str(e)}')
+
 @measurement_bp.route('/default-baby', methods=['GET'])
 @jwt_required()
 def get_measurements_for_default_baby():
