@@ -13,8 +13,11 @@ def _normalize_database_url(url: str) -> str:
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key'
-    DEFAULT_POSTGRES_URL = 'postgresql+psycopg://breastfeeding_app:breastfeeding_pass@localhost:5432/breastfeeding'
-    SQLALCHEMY_DATABASE_URI = _normalize_database_url(os.environ.get('DATABASE_URL', DEFAULT_POSTGRES_URL))
+    if os.environ.get('DATABASE_URL'):
+        SQLALCHEMY_DATABASE_URI = _normalize_database_url(os.environ['DATABASE_URL'])
+    else:
+        DEFAULT_SQLITE_URL = 'sqlite:///app.db'
+        SQLALCHEMY_DATABASE_URI = DEFAULT_SQLITE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-string'
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)

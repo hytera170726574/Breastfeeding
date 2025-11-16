@@ -55,10 +55,12 @@ def create_app(config_class=Config):
             abort(404)
 
         if path:
-            try:
+            full_path = os.path.join(frontend_dist, path)
+            if os.path.exists(full_path):
                 return send_from_directory(frontend_dist, path)
-            except NotFound:
-                pass
+            # 如果请求的是具体文件（如 .js/.css）但不存在，直接返回 404，避免返回 HTML 导致 MIME 报错
+            if '.' in os.path.basename(path):
+                abort(404)
 
         return send_from_directory(frontend_dist, 'index.html')
 
